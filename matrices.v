@@ -82,11 +82,15 @@ Section stuff.
   (* Check [ringType of int]. *)
   (* Check [fieldType of rat]. *)
   (* Print rat_fieldType. *)
-  Definition n: nat := 2.
+  Variable n: nat.
   Variable k: nat.
   (*Variable n k : nat. *)
   Variable kge1 : k >= 1.
+  Variable nge1 : n >= 1.
 
+  Variable field_has_char_zero :
+    forall n : nat, (@GRing.natmul R 1 (n.+1)) != 0.
+  
   Check addnA.
   Check addnI.
   Check esym.
@@ -169,6 +173,7 @@ Section stuff.
   (* Vektor (1, 0, ... -1 , 0.. ),
      '-1' är på position (j+1)
    *)
+  (*
   Definition ones_perp_vec (j: 'I_(n-1)) : 'rV[R]_n.
     Print ordinal.
     (* Ordinal : forall m : nat, m < n -> 'I_n. *)
@@ -184,10 +189,10 @@ Section stuff.
         else if α == jj
              then -1
              else 0)).
-  Defined.        
-Print ones_perp_vec.    
+  Defined.        *)
+(*Print ones_perp_vec.    *)
 
-Lemma ones_perp_coeff (j: 'I_(n-1)) : forall (α : 'I_n), 
+(*Lemma ones_perp_coeff (j: 'I_(n-1)) : forall (α : 'I_n), 
       (ones_perp_vec j 0 α) = (if α == 0
                  then 1
                  else if α == lshift 1 j
@@ -196,26 +201,26 @@ Lemma ones_perp_coeff (j: 'I_(n-1)) : forall (α : 'I_n),
                 ).
   by move=> α; rewrite mxE.
 Qed.
-
+*)
 About big_mkord.
 (* square brackets: nåt med implicita argument *)
-Lemma sum_nat_mkord_trueprop [n: nat] (c: nat) :
-    (\sum_(i < n) c)%N = (n * c)%N. 
+Lemma sum_nat_mkord_trueprop [nn: nat] (c: nat) :
+    (\sum_(i < nn) c)%N = (nn * c)%N. 
 Proof.
   by rewrite -[(\sum_(i < _) _)%N]/
              (\sum_(i < _ | ((fun _: nat => _) i))
                 ((fun _: nat=> c) i))%N -big_mkord sum_nat_const_nat;
   unfold subn;
   unfold subn_rec;
-  rewrite -(Minus.minus_n_O n).
+  rewrite -(Minus.minus_n_O nn).
 Qed.  
 
-Definition all_perp : 'M[R]_(n-1, n).
+(*Definition all_perp : 'M[R]_(n-1, n).
   by have result :=  \mxblock_(i < (n-1), j < 1) (ones_perp_vec i);
                      move: result; 
                      rewrite !sum_nat_mkord_trueprop.
 Defined.
-
+*)
 (*Search mulmx block_mx.
 Print invmx.
 Search unitmx.
@@ -262,8 +267,8 @@ Search 1%:M.
 
 About const_mx.
 About block_mx.
-
-Definition P : 'M[R]_(1%N + (n-1)%N) := (@block_mx R 1 (n-1)%N (n-1)%N (n-1)%N
+Print block_mx.
+Definition P : 'M[R]_(1%N + (n-1)%N) := (@block_mx R 1 (n-1)%N 1 (n-1)%N
                                            (const_mx 1)  (const_mx 1)
                                            (const_mx 1) ((-1)%:M)).
 Lemma P_unit : P \in unitmx.
@@ -281,43 +286,37 @@ Lemma P_unit : P \in unitmx.
     det_mx11 invrN1  scalar_mxC.
 
   (* Suck. *)
-  have mul_c: (const_mx 1 : 'rV_n) *m (const_mx 1 : 'cV_n)
-              = (n-1)%:M.
+  have dotmul: (const_mx 1 : 'rV[R]_(n-1)) *m (const_mx 1 : 'cV_(n-1))
+               = const_mx (n-1)%:R.
+  generalize (n-1)%N.
+  move=> nn;
+         rewrite (mx11_scalar (const_mx _))
+           (mx11_scalar (_ *m _));
+         rewrite !mxE.
+  
+  (*simpl in const_mx_eq.*)
+  rewrite (eq_bigr (fun=>1)); last first.
+  by move=> i _ /[!mxE] /[!mulr1].
+  rewrite big_const_ord.
+  suff aou : (iter nn (+%R 1) 0) = nn%:R by rewrite (aou R).
+  move=> RR.
+  elim: nn => [|nn indH] //=.
+  by rewrite indH -[nn.+1]/((1+nn)%N) natrD.
 
-  About const_mx.
-  Search "dotmul".
-  Search _ ('cV__) mulmx.
-  Search ((_ : 'rV__) *m (_ : 'cV__)).
+  rewrite -mulmxA dotmul  mul_scalar_mx scalemx_const !mxE  mulN1r opprK.
 
-  Print mulmx.
-  
-  Search 'cV_1.
-  Search _ "mx11".
-  About scalar_mx.
-  Search (@scalar_mx _ 1).
-  
-  Search (_ *m _%:M).
-  
-  Set Printing All.
-  Search ((-1) ^ _).
-  Search odd.
-  Print signr_odd.
-  rewrite -[(-1)^-1]/signr_odd.
-  Search (invmx (_%:M)).
-  Search pinvmx invmx.
+  rewrite -{2}(mulr1n 1) -mulrnDr.
+  generalize nge1. case n => [fls|n' _] //=.
+  rewrite subSS -[subn]/Nat.sub PeanoNat.Nat.sub_0_r  unitfE .
 
-  -mulN1r det_mulmx det1 mulr1.
-  (* Vi har en n x n - matris, vilket framgår av det-argumentet.
-     det händer nån skum implicit konvertering tror jag.
-     Kollar i MatrixZmodule och MatrixRing. Vad  GRing.opp ligger i zmodule?
-   *)
+  suff aou: (@GRing.natmul R 1 (1 + n')) != 0.
+  case: (odd n') => //=; rewrite ?expr1 ?expr0 ?unitrN1 ?unitr1;
+                    apply: GRing.mulf_neq0;
+                    [ exact (lreg_neq0 (lregN (@lreg1 _)))
+                    | exact aou|  |exact aou ].
+  apply: oner_neq0.
   
-          (@GRing.opp
-             (GRing.Ring.zmodType
-                (matrix_ringType (GRing.Field.ringType R) 1))
-             (GRing.one (matrix_ringType (GRing.Field.ringType R) 1)))
-    
-  Search determinant scalar_mx.
-  
-  rewrite det_scalar.
+  by rewrite -[(1+n')%N]/n'.+1  field_has_char_zero.
+Qed.
 
+(* Nästa steg: m diagonaliseras med P *)
