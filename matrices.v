@@ -2,6 +2,8 @@ From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat choice seq.
 From mathcomp Require Import div fintype tuple finfun bigop fingroup perm.
 From mathcomp Require Import ssralg zmodp matrix mxalgebra poly polydiv mxpoly.
 
+From Hammer Require Import Hammer. (* for `hammer` *)
+From Hammer Require Import Tactics .
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -66,42 +68,12 @@ Section m_matrix_properties.
   
   Context [R : GRing.Field.type]
     (n k: nat) (kge1: k >=1) (nge1: n >= 1)
-    (field_has_char_zero :
-      forall n : nat, (@GRing.natmul R 1 (n.+1)) != 0).
+    (* Check the comments in ssralg.v for an explanation, or
+       just print. Use together with 'charf0P'
+     *)
+    (field_has_char_zero : [char R] =i pred0).
 
-  (* The adjacency matrix in the Friendship Theorem
-     in an arbitrary field with characteristic 1.
-   *)
-  Definition m : 'M_n  := \matrix_ ( i , j < n ) (
-                              (intmul (GRing.one R)
-                                 (if i == j
-                                  then k
-                                  else 1%nat))) .
-    
-  Lemma m_coeff : forall (i j : 'I_n), 
-      (m i j) = (if i == j
-                 then k
-                 else 1%nat) %:R.
-    by move=> i j; rewrite /m mxE //.
-  Qed.
-
-
-  Definition m' : 'M_n  := addmx (const_mx 1)
-                             (@scalar_mx R n (k-1)%:R).
-  Lemma m_is_ones_plus_I : m = m'.
-    (* Seems 3x longer than this should take *)
-    rewrite /m /m' /addmx.
-    apply/matrixP => i j; rewrite !mxE;
-                     case: (i == j) => //=; clear i j.
-    move: kge1; case: k => [//| k' _].
-    {
-      have an_eq: subn k'.+1 1 = k' by rewrite -[subn]/Nat.sub; lia.
-      by rewrite mulr1n  -[Posz (S k')]/(1+(Posz k')) intrD an_eq.
-    }
-    by rewrite mulr0n addr0.
-  Qed.
-
-
+  
   (* First attempt at defining the P matrix. Defined in block form below.
      In block form it seems easier to prove that it's invertable and that
      it diagonalizes m.
@@ -177,21 +149,8 @@ Definition P : 'M[R]_(1%N + (n-1)%N) := (@block_mx _ 1 (n-1)%N 1 (n-1)%N
                                            (const_mx 1)  (const_mx 1)
                                            (const_mx 1) ((-1)%:M)).
 
-(* Proof by computation; Use the block determinant formula to show
-   that the determinant is ±n, and then use the field characteristic
-   assumption to show that it's not zero. *)
-Lemma P_unit : P \in unitmx.
-  
-  have neg1M_det m : 
-    (\det ((-1)%:M : 'M[R]_m)) = (-1) ^+ (odd m) by
-    rewrite det_scalar -[in LHS]signr_odd.
-
-  have neg1M_unit m : ((-1)%:M : 'M[R]_m) \in unitmx
-      by rewrite unitmxE neg1M_det; case: (odd m); 
-    rewrite ?expr1 ?expr0 ?unitrN1 ?unitr1.
-
-  have dotmul nn: (const_mx 1 : 'rV[R]_nn) *m (const_mx 1 : 'cV_nn)
-               = const_mx nn%:R.
+Lemma dotmul nn: (const_mx 1 : 'rV[R]_nn) *m (const_mx 1 : 'cV_nn)
+                 = const_mx nn%:R.
 
   rewrite (mx11_scalar (const_mx _)) (mx11_scalar (_ *m _)) !mxE
     (eq_bigr (fun=>1)); [| by move=> i _ /[!mxE] /[!mulr1]].
@@ -200,8 +159,21 @@ Lemma P_unit : P \in unitmx.
   suff aou : (@iter R nn (+%R 1) 0) = nn%:R by rewrite aou.
   elim: nn => [|nn //= -> ] //= ;
                 by rewrite  -[nn.+1]/((1+nn)%N) natrD.
+Qed.
 
-  (* dotmul proof done, start proof of lemma statement *)
+(* Proof by computation; Use the block determinant formula to show
+   that the determinant is ±n, and then use the field characteristic
+   assumption to show that it's not zero. *)
+Lemma P_unit : P \in unitmx.
+  
+  have neg1M_det m : 
+    (\det ((-1)%:M : 'M[R]_m)) = (-1) ^+ (odd m) by
+    rewrite det_scalar -[in LHS]signr_odd.
+  
+  have neg1M_unit m : ((-1)%:M : 'M[R]_m) \in unitmx
+      by rewrite unitmxE neg1M_det; case: (odd m); 
+    rewrite ?expr1 ?expr0 ?unitrN1 ?unitr1.
+
   
   rewrite unitmxE  det_block // neg1M_det (pinvmxE (neg1M_unit _))
     invmx_scalar det_mx11 invrN1  scalar_mxC
@@ -218,7 +190,9 @@ Lemma P_unit : P \in unitmx.
                     | exact aou|   |exact aou ].
   
   exact (oner_neq0 _).
-  by rewrite -[(1+n')%N]/n'.+1  field_has_char_zero.
+  
+  by rewrite -[(1+n')%N]/n'.+1  (iffLR (charf0P _)
+                                   field_has_char_zero _).
 Qed.
 
 (* Nästa steg: m diagonaliseras med P *)
@@ -227,3 +201,164 @@ Qed.
 
 (* Sen: kvadratrot till matris som diagonaliseras i samma bas,
    och har kvadratrötter som egenvärden (svårt) *)
+
+About diag_mx.
+Search "block" matrix.
+Search "mx11".
+About row_mx.
+Locate "%:M".
+Print scalar_mx.
+
+(*
+Jag vill kunna definiera D som diagonalmatrisen
+*)
+Lemma dim_is_n: (1+(n-1))%N = n.
+  by move:
+    n nge1  => [|n'] _ //=; rewrite /subn /subn_rec //=
+                         PeanoNat.Nat.sub_0_r.
+Qed.
+
+(* Originally
+https://stackoverflow.com/questions/52514957/coq-use-equality-of-types-for-type-checking-a-term-in-a-definition,
+I simplified for my needs to remove the 'f'
+*)
+Definition cast {T1 T2 : nat} (H : T1 = T2)
+  (f : nat -> Type) (x : f T1) :=
+  eq_rect T1 (fun T3 : nat => f T3) x T2 H.
+
+About cast.
+(* No idea why I need the full-arg version @cast. {T1, T2} should be
+implicit (and Coq happily infers the holes), but I can't leave them
+out. 
+
+TODO: Check 'castmx' in matrix.v. I think it comes with lemmas for 
+substitution.
+ *)
+Definition diag_vec : 'rV[R]_n :=
+  @cast _ _ dim_is_n (fun t=> 'rV[R]_t)
+       (row_mx ((k+n-(S O))%:R%:M : 'rV_1)
+          (@const_mx R _ _ (k-1)%:R : 'rV_(n-1))).
+
+Definition diag_vec' : 'rV[R]_(1 + (n-1)) :=
+  (row_mx ((k+n-(S O))%:R%:M : 'rV_1)
+     (@const_mx R _ _ (k-1)%:R : 'rV_(n-1))).
+
+Definition D : 'M[R]_n := diag_mx diag_vec.
+Definition D' : 'M_(1+(n-1)) := diag_mx diag_vec'.
+
+
+Lemma D_block_form : D' = @block_mx _ 1 (n-1)%N 1 (n-1)%N
+                           (const_mx (k+n-1)%:R) 0
+                           0            (k-1)%:R%:M.
+  rewrite /D' /diag_vec' diag_mx_row diag_const_mx.
+
+  suff oeua: (diag_mx (@scalar_mx _ 1 (k+n-1)%N%:R)) = 
+               (@const_mx R 1 1 (k+n-1)%N%:R)
+    by rewrite oeua.
+  
+  by rewrite (mx11_scalar (const_mx _)) (mx11_scalar (diag_mx _)) !mxE
+  //=.
+Qed.
+
+(* The adjacency matrix in the Friendship Theorem
+     in an arbitrary field with characteristic 0.
+   *)
+  (*Definition m : 'M_n  := \matrix_ ( i , j < n ) (
+                              (intmul (GRing.one R)
+                                 (if i == j
+                                  then k
+                                  else 1%nat))) .
+    
+  Lemma m_coeff : forall (i j : 'I_n), 
+      (m i j) = (if i == j
+                 then k
+                 else 1%nat) %:R.
+    by move=> i j; rewrite /m mxE //.
+  Qed.
+  *)
+
+  Definition m' : 'M_(1 + (n-1))  := addmx (const_mx 1)
+                                      (@scalar_mx R _ (k-1)%:R).
+  (*Lemma m_is_ones_plus_I : m = m'.
+    (* Seems 3x longer than this should take *)
+    rewrite /m /m' /addmx.
+    apply/matrixP => i j; rewrite !mxE;
+                     case: (i == j) => //=; clear i j.
+    move: kge1; case: k => [//| k' _].
+    {
+      have an_eq: subn k'.+1 1 = k' by rewrite -[subn]/Nat.sub; lia.
+      by rewrite mulr1n  -[Posz (S k')]/(1+(Posz k')) intrD an_eq.
+    }
+    by rewrite mulr0n addr0.
+  Qed.
+   *)
+
+  Print m'.
+  Lemma m'_block_form :
+    m' = @block_mx _ 1 (n-1)%N 1 (n-1)%N
+           (const_mx k%:R)     (const_mx 1)
+           (const_mx 1)        (addmx (const_mx 1) (k - 1)%:R%:M).
+    apply/matrixP => i j.
+    rewrite !mxE.
+    case (split i) => [ (* forall o : 'I_1, *)
+        [[|m'] e]
+      |] //=.
+    (* TODO: Check the rowmx / colmx, submx lemmas in matrix.v
+       AND/OR read chapter 7 of the math-comp book. *)
+    About unsplitK.
+    About lsubmx.
+    Search 'I_1.
+    Print all_equal_to.
+    (*ord1*)
+     
+  Admitted.
+    
+Lemma D_m_P_eq : (P *m m') = (D' *m P).
+
+  rewrite /P m'_block_form D_block_form
+    !mulmx_block !mul0mx !addr0 !add0r !mul_scalar_mx
+    (mx11_scalar (const_mx (k + n - 1)%:R)) (mx11_scalar (const_mx 1))
+    [in RHS](mx11_scalar (const_mx 1))
+    !mxE -scalar_mxM //= !mul_scalar_mx !scalemx_const !mulr1  scale_scalar_mx.
+
+  (* Top left block : *)
+  rewrite mul1r dotmul  (mx11_scalar (const_mx k%:R))
+    (mx11_scalar (const_mx (n-1)%:R))
+    !mxE (mx11_scalar (k%:R%:M + (n - 1)%:R%:M)) mxE  !(mxE _ _ 0 0) //=
+    !mulr1n -natrD.
+  have kn_expr : (k + (n - 1))%N = (k + n -1)%N.
+  rewrite /subn /subn_rec /addn /addn_rec;
+    move: nge1. case: n => [|n'] _ //=; lia.
+  rewrite kn_expr.
+  clear kn_expr field_has_char_zero.
+  
+
+  (* Bot left block: *)
+  rewrite scalar_mxC mul_scalar_mx scalemx_const mulr1.
+  have bot_left_eq:
+    (@const_mx R (n-1) 1 k%:R + const_mx (-1)) = const_mx (k-1)%:R .
+  apply/matrixP => i j; rewrite !mxE.
+  
+  move: kge1; case: k => [//| k' _].
+  by rewrite /subn /subn_rec //= PeanoNat.Nat.sub_0_r  [_.+1]/((1+k')%N) -/addn
+    natrD addrC addrA (addNr 1) add0r.
+  rewrite bot_left_eq.
+  (* bot left block done *)
+
+  (* TODO: CONTINUE FROM HERE
+
+     Left (in this proof):
+        - ones : 'M_n = col_ones *m row_ones
+        - use that to rewrite the top right and bot right expression
+     Left (in other parts):
+        - block form for 'm' (possibly look into 'cast' and submx
+        - ring characteristic; rewrite the 
+   *)
+
+(*
+Lemma D_diag_form : D = diag_mx (
+      row_mx ((k+n-(S O))%:R%:M : 'rV_1)
+        (@const_mx R _ _ (k-1)%:R : 'rV_(n-1))).
+Print D. 
+Lemma diagonalizable_m : A ~_P B
+*)
