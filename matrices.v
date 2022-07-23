@@ -2,18 +2,6 @@ From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat choice seq.
 From mathcomp Require Import div fintype tuple finfun bigop fingroup perm.
 From mathcomp Require Import ssralg zmodp matrix mxalgebra poly polydiv mxpoly.
 
-About unitmx.
-Print unitmx.
-Print poly.root.
-Print uniq.
-Locate ":=:".
-
-Locate "{in P  & , }".
-About is_diag_mx.
-Search _ char_poly.
-Print stablemx (* Nåt full-rank-liknande koncept *).
-
-Locate "%:M".
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -30,7 +18,6 @@ Section sim_char_poly.
   Proof.
 (*have simp := (row_free_unit, stablemx_unit, unitmx_inv, unitmx1).*)
     move=> Vu; apply/eqP.
-    Check map_mxM.
     unfold char_poly, char_poly_mx; rewrite conjumx //  !map_mxM.
 
     set lift := map_mx (polyC_rmorphism F).
@@ -53,7 +40,6 @@ fixas ganska enkelt.
                         lift_invmx det_inv mulVr ?mul1r.
     by []. by rewrite -unitmxE map_unitmx ?Vu. 
   Qed.
-
   
   Lemma simmx_charpoly {n} {P A B : 'M[F]_n.+1} : P \in unitmx ->
   A ~_P B -> char_poly A = char_poly B.
@@ -67,56 +53,25 @@ Import GroupScope.
 Import GRing.Theory.
 Local Open Scope ring_scope.
 
-Search _ scalar_mx.
-Print insub.
-Print is_scalar_mx.
 
+Section m_matrix_properties.
+  From mathcomp Require Import ssrint.
+  Require Import Lia.
+  (* Doesn't really work well for me. It times out or crashes the Coq
+     process due to OOM.
 
-Section stuff.
-  Context [R : GRing.Field.type].
-  (*Variable R : ringType. (* (*= int :> ringType.  := int. (* Testar med Z först *) *) *) *)
-  (* Definition R :=  (*rat_fieldType. *) *)
-
-  Definition R_sort := GRing.Zmodule.sort.
-  
-  (* Check [ringType of int]. *)
-  (* Check [fieldType of rat]. *)
-  (* Print rat_fieldType. *)
-  Variable n: nat.
-  Variable k: nat.
-  (*Variable n k : nat. *)
-  Variable kge1 : k >= 1.
-  Variable nge1 : n >= 1.
-
-  Variable field_has_char_zero :
-    forall n : nat, (@GRing.natmul R 1 (n.+1)) != 0.
-  
-  Check addnA.
-  Check addnI.
-  Check esym.
-  Locate "\matrix_".
-
-  Locate "%:~R".
-
-  Print GRing.Ring.type.
-  About zmodType.
-  About GRing.one.
-  
-  About intmul.
-  Search _ zmodType "ring".
-  Print GRing.Ring.
-
-  (* Ringar är också Z-moduler, men returtypen för 'intmul', inte
-     ring.  På nåt sätt ska man få Coq att acceptera att intmul
-     bevarar ringen.
+     From Hammer Require Import Hammer. (* for `hammer` *)
+     From Hammer Require Import Tactics .  
    *)
-
-  (* Definition lift (n: nat) : (R_sort R) := *)
-  (*   (intmul n (GRing.one R)). *)
-  Print GRing.Zmodule.
-
-  From mathcomp Require Import ssrint rat.
   
+  Context [R : GRing.Field.type]
+    (n k: nat) (kge1: k >=1) (nge1: n >= 1)
+    (field_has_char_zero :
+      forall n : nat, (@GRing.natmul R 1 (n.+1)) != 0).
+
+  (* The adjacency matrix in the Friendship Theorem
+     in an arbitrary field with characteristic 1.
+   *)
   Definition m : 'M_n  := \matrix_ ( i , j < n ) (
                               (intmul (GRing.one R)
                                  (if i == j
@@ -130,54 +85,32 @@ Section stuff.
     by move=> i j; rewrite /m mxE //.
   Qed.
 
-  Print GRing.Field.
 
-  
-
-  From Hammer Require Import Hammer. (* for `hammer` *)
-  From Hammer Require Import Tactics .
-  Require Import Lia.
-  Check scalar_mx.
-  Print R.
   Definition m' : 'M_n  := addmx (const_mx 1)
                              (@scalar_mx R n (k-1)%:R).
-
-  Print scalar_mx.
-  Locate "*+".
-  Print GRing.natmul.
   Lemma m_is_ones_plus_I : m = m'.
-    rewrite /m /m' /addmx;
-    case: addmx_key;
-    case: matrix_key;
-    apply/matrixP => i j; rewrite !mxE; case: (i == j) => //=;
-      move: kge1; case: k => [//| k' _] .
-
-    
-    rewrite mulr1n.
-    clear i j kge1.
-    
-    rewrite -[Posz (S k')]/(1+(Posz k')) intrD.
-    have an_eq: subn k'.+1 1 = k' by
-      rewrite -[subn]/Nat.sub; lia.
-    by rewrite  an_eq.
-
+    (* Seems 3x longer than this should take *)
+    rewrite /m /m' /addmx.
+    apply/matrixP => i j; rewrite !mxE;
+                     case: (i == j) => //=; clear i j.
+    move: kge1; case: k => [//| k' _].
+    {
+      have an_eq: subn k'.+1 1 = k' by rewrite -[subn]/Nat.sub; lia.
+      by rewrite mulr1n  -[Posz (S k')]/(1+(Posz k')) intrD an_eq.
+    }
     by rewrite mulr0n addr0.
   Qed.
 
-  Search (_ -> 'M_(_ _)) "block".
-  Search row_free.
 
-  Search (_ -> 'rV__).
-
-  
+  (* First attempt at defining the P matrix. Defined in block form below.
+     In block form it seems easier to prove that it's invertable and that
+     it diagonalizes m.
+   *)
   (* Vektor (1, 0, ... -1 , 0.. ),
      '-1' är på position (j+1)
    *)
   (*
   Definition ones_perp_vec (j: 'I_(n-1)) : 'rV[R]_n.
-    Print ordinal.
-    (* Ordinal : forall m : nat, m < n -> 'I_n. *)
-    About lshift.
 
     have jj := lshift 1 j.
     rewrite -[(n-1+1)%nat]/n in jj.
@@ -202,18 +135,14 @@ Section stuff.
   by move=> α; rewrite mxE.
 Qed.
 *)
-About big_mkord.
+
 (* square brackets: nåt med implicita argument *)
-Lemma sum_nat_mkord_trueprop [nn: nat] (c: nat) :
+(*Lemma sum_nat_mkord_trueprop [nn: nat] (c: nat) :
     (\sum_(i < nn) c)%N = (nn * c)%N. 
 Proof.
-  by rewrite -[(\sum_(i < _) _)%N]/
-             (\sum_(i < _ | ((fun _: nat => _) i))
-                ((fun _: nat=> c) i))%N -big_mkord sum_nat_const_nat;
-  unfold subn;
-  unfold subn_rec;
-  rewrite -(Minus.minus_n_O nn).
-Qed.  
+  by rewrite big_const_ord iter_addn_0 mulnC.
+Qed.
+*)
 
 (*Definition all_perp : 'M[R]_(n-1, n).
   by have result :=  \mxblock_(i < (n-1), j < 1) (ones_perp_vec i);
@@ -221,102 +150,80 @@ Qed.
                      rewrite !sum_nat_mkord_trueprop.
 Defined.
 *)
-(*Search mulmx block_mx.
-Print invmx.
-Search unitmx.
-Search determinant invmx.
-Search determinant block_mx.
-About pinvmx.
-About invmx.
-Print matrix_lmodType.
-Search pinvmx.
-About map_invmx.
-About det_inv.
-About unitmx_inv.
 
-About mem_pred.
-Print unitmx.*)
-(*Set Printing All.*)
-Print pinvmx.
 (* Block matrix determinant formula *)
 Lemma det_block [n1 n2: nat] (A: 'M[R]_n1) (B: 'M_(n1, n2))
-  (C: 'M_(n2, n1)) (D: 'M[R]_(n2, n2)):
-  (D \in unitmx) -> \det (block_mx A B C D) =
+  (C: 'M_(n2, n1)) (D: 'M[R]_(n2, n2)) (Dinv: D \in unitmx):
+  \det (block_mx A B C D) =
                       \det D * \det (A - B *m (pinvmx D) *m C).
 Proof.
-  move=> Dinv.
+  clear n k nge1 kge1 field_has_char_zero.
   set block2 := (block_mx 1%:M 0 (-(pinvmx D)*m C) 1%:M).
+  
   have block_eq:
     (block_mx A B C D) *m block2
     = block_mx (A - B *m (pinvmx D) *m C) B 0 D
     by rewrite mulmx_block !mulmx1 !mulmx0 !add0r [B *m (_ *m _)]mulmxA
     !mulNmx !mulmxN  [D *m _]mulmxA  (pinvmxE Dinv)
           -[D *m invmx D *m C]mulmxA (mulKVmx Dinv _) addrN mulNmx.
-  have block_2_det1 : (\det block2 = 1)
-    by rewrite det_lblock !det1 mul1r.
-  have block_2_inv : block2 \in unitmx
-      by rewrite unitmxE block_2_det1 unitr1.
-  have mulmx_inv : forall nn (E F : 'M[R]_nn),
-      F \in unitmx -> E *m F *m (invmx F) = E
-        by move=> nn E F F_unit; rewrite (mulmxK F_unit).
-  by rewrite -(mulmx_inv _ (block_mx A B C D) block2 block_2_inv) block_eq
-             det_mulmx  det_inv block_2_det1 invr1 mulr1 det_ublock mulrC.
+  have block_2_det1 : (\det block2 = 1) by rewrite det_lblock !det1 mul1r.
+  have block_2_inv : block2 \in unitmx by rewrite unitmxE block_2_det1 unitr1.
+  by rewrite -(mulmxK block_2_inv (block_mx A B C D)) block_eq
+                det_mulmx  det_inv block_2_det1 invr1 mulr1 det_ublock mulrC.
 Qed.
 
-Search 1%:M.
 
-About const_mx.
-About block_mx.
-Print block_mx.
-Definition P : 'M[R]_(1%N + (n-1)%N) := (@block_mx R 1 (n-1)%N 1 (n-1)%N
+Definition P : 'M[R]_(1%N + (n-1)%N) := (@block_mx _ 1 (n-1)%N 1 (n-1)%N
                                            (const_mx 1)  (const_mx 1)
                                            (const_mx 1) ((-1)%:M)).
+
+(* Proof by computation; Use the block determinant formula to show
+   that the determinant is ±n, and then use the field characteristic
+   assumption to show that it's not zero. *)
 Lemma P_unit : P \in unitmx.
-  Search unitmx determinant.
-  rewrite unitmxE.
-  have neg1M_det : forall m,
+  
+  have neg1M_det m : 
     (\det ((-1)%:M : 'M[R]_m)) = (-1) ^+ (odd m) by
-  move=> m; rewrite det_scalar -[in LHS]signr_odd.
+    rewrite det_scalar -[in LHS]signr_odd.
 
-  have neg1M_unit : forall m, ((-1)%:M : 'M[R]_m) \in unitmx
-      by move => m; rewrite unitmxE neg1M_det; case: (odd m);
+  have neg1M_unit m : ((-1)%:M : 'M[R]_m) \in unitmx
+      by rewrite unitmxE neg1M_det; case: (odd m); 
     rewrite ?expr1 ?expr0 ?unitrN1 ?unitr1.
-  
-  rewrite det_block // neg1M_det (pinvmxE (neg1M_unit _)) invmx_scalar
-    det_mx11 invrN1  scalar_mxC.
 
-  (* Suck. *)
-  have dotmul: (const_mx 1 : 'rV[R]_(n-1)) *m (const_mx 1 : 'cV_(n-1))
-               = const_mx (n-1)%:R.
-  generalize (n-1)%N.
-  move=> nn;
-         rewrite (mx11_scalar (const_mx _))
-           (mx11_scalar (_ *m _));
-         rewrite !mxE.
+  have dotmul nn: (const_mx 1 : 'rV[R]_nn) *m (const_mx 1 : 'cV_nn)
+               = const_mx nn%:R.
+
+  rewrite (mx11_scalar (const_mx _)) (mx11_scalar (_ *m _)) !mxE
+    (eq_bigr (fun=>1)); [| by move=> i _ /[!mxE] /[!mulr1]].
   
-  (*simpl in const_mx_eq.*)
-  rewrite (eq_bigr (fun=>1)); last first.
-  by move=> i _ /[!mxE] /[!mulr1].
   rewrite big_const_ord.
-  suff aou : (iter nn (+%R 1) 0) = nn%:R by rewrite (aou R).
-  move=> RR.
-  elim: nn => [|nn indH] //=.
-  by rewrite indH -[nn.+1]/((1+nn)%N) natrD.
+  suff aou : (@iter R nn (+%R 1) 0) = nn%:R by rewrite aou.
+  elim: nn => [|nn //= -> ] //= ;
+                by rewrite  -[nn.+1]/((1+nn)%N) natrD.
 
-  rewrite -mulmxA dotmul  mul_scalar_mx scalemx_const !mxE  mulN1r opprK.
-
-  rewrite -{2}(mulr1n 1) -mulrnDr.
-  generalize nge1. case n => [fls|n' _] //=.
-  rewrite subSS -[subn]/Nat.sub PeanoNat.Nat.sub_0_r  unitfE .
+  (* dotmul proof done, start proof of lemma statement *)
+  
+  rewrite unitmxE  det_block // neg1M_det (pinvmxE (neg1M_unit _))
+    invmx_scalar det_mx11 invrN1  scalar_mxC
+          -mulmxA dotmul  mul_scalar_mx scalemx_const !mxE  mulN1r opprK
+          -{2}(mulr1n 1) -mulrnDr.
+    generalize nge1;
+      case n => [_|n' _] //= ;
+                rewrite subSS  /subn /subn_rec  PeanoNat.Nat.sub_0_r  unitfE .
 
   suff aou: (@GRing.natmul R 1 (1 + n')) != 0.
   case: (odd n') => //=; rewrite ?expr1 ?expr0 ?unitrN1 ?unitr1;
                     apply: GRing.mulf_neq0;
                     [ exact (lreg_neq0 (lregN (@lreg1 _)))
-                    | exact aou|  |exact aou ].
-  apply: oner_neq0.
+                    | exact aou|   |exact aou ].
   
+  exact (oner_neq0 _).
   by rewrite -[(1+n')%N]/n'.+1  field_has_char_zero.
 Qed.
 
 (* Nästa steg: m diagonaliseras med P *)
+
+(* Sen: karakteristiskt polynom (men det är enkelt) *)
+
+(* Sen: kvadratrot till matris som diagonaliseras i samma bas,
+   och har kvadratrötter som egenvärden (svårt) *)
