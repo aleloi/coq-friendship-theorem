@@ -426,77 +426,34 @@ Proof.
   by rewrite !big_const_ord !iter_mulr !mulr1 expr1.
 Qed.
 
+(* TO BE moved; just typing it out to se how it would look like
+   Questions: how do I write polynomial root products? As
+   \prod_(r <- seq) ('X - r)
+   or with matrices and ordinals?
+ *)
+From mathcomp Require Import tuple.
+Lemma polys_and_squares_technical_lemma
+  d (λs μs: d.-tuple R) (p q: poly_ringType R):
+  p = \prod_(λ <- λs) ('X - λ%:P) ->
+  (p \Po ( 'X^2 )) = \prod_(μ <- μs) ('X - (μ^2) %:P) ->
+     { μs' : d.-tuple R |
+       ((\prod_(μ <- μs ) ('X - μ%:P)) = (\prod_(μ' <- μs' ) ('X - μ'%:P))) &
+         (forall i : 'I_d, (tnth μs' i) ^2 = (tnth λs i)^2)
+         }.
+  (* Polynomial with 'X substituted to 'X^2 *)
+Admitted.                            
+
 Definition is_square_root A := A *m A = adj2.
+(*From mathcomp Require Import seq.*)
 
 
-  (*
-
-Next step: show a lemma that relates 'char_poly A^2 ' to 'char_poly A'
-for alg closed fields or assuming both split into linear factors. One
-gets its roots squared. You expand det (A^2 - x^2I) = det(A-xI) ×
-det(A+xI) and equate both sides.
-
-Isn't needed:
-Lemma square_root_commutes A :
-  is_square_root A -> A *m adj2 = adj2 *m A.
-  by move=> <-; rewrite mulmxA.
-Qed.
-
-   
-
-Record SquareRootDiag {A} (isq: is_square_root A) : Type := Dummy {
-                                    D: matN;
-                                    D2: matN;
-                                    Q: matN;
-                                    Dsq : D *m D = D2;
-                                    A_sim_D : A ~_Q D;
-                                    adj_sim_D2 : adj2 ~_Q D2
-                                  }.
-
-Lemma square_root_diag A (isq: is_square_root A) :
-  SquareRootDiag isq.
-
-  
-
-  Check (simmxRL P_unit).
-  have m_expr : adj2 = (invmx P) *m adj2_diag *m P.
-   {rewrite (simmxLR P_unit diagonalizable_m) /conjmx.
-    have iP_u : (invmx P) \in unitmx by rewrite (unitmx_inv P); exact P_unit.
-    by rewrite (pinvmxE iP_u) invmxK.
-   }
-   rewrite -A_sqr in m_expr.
-
-   Check (codiagonalizableP [:: A; adj2] ).
-
-   have aoue := 
-   
-        Search invmx.
-    have adj2_diag_conj : adj2_diag ~_(invmx P) adj2.
-
-  apply /simmxRL .
-  {  rewrite unitmx_inv; exact P_unit.}
-  {
-    rewrite (simmxLR P_unit diagonalizable_m) /conjmx.
-    
-  }
-    Search pinvmx invmx.
-    Check (unitmx_inv P P_unit).
-    
-    Check .
-    Search (_ ~__ _).
-    Search invmx.
-
-    mulVpmx: forall [F : fieldType] [m n : nat] [A : 'M_(m, n)],
-        row_full A -> pinvmx A *m A = 1%:M
-mulmxVp:
-    
-  
-  
-  rewrite /(simmxRL P_unit diagonalizable_m).
-  
-
-Search "sqrt" -BinNums.Z -BinNums.N -nat.
-Print ssrnum.Num.ClosedField.
-   *)
-
+Lemma adj_mtx_char_poly mtx (μs: n.-tuple R) :
+  is_square_root mtx ->
+  char_poly mtx = \prod_(μ <- μs) ('X - μ %:P) ->
+  { μs' : (1+(n-1)).-tuple R |
+    char_poly mtx = \prod_(μ <- μs') ('X - μ %:P) &
+      map_tuple (fun x => x^2) μs' = cons_tuple (k + n - 1)%:R
+                                       (nseq_tuple (n-1) (k - 1)%:R)
+  }.
+Admitted.
 End m_matrix_properties.
