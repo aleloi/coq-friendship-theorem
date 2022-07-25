@@ -296,7 +296,7 @@ Qed.
   Qed.
    *)
 
-  (*Print adj2.*)
+  (*Print adj2.*) 
   Lemma adj2_block_form :
     adj2 = @block_mx _ 1 (n-1)%N 1 (n-1)%N
            (const_mx k%:R)     (const_mx 1)

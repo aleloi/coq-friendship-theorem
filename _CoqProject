@@ -1,2 +1,2 @@
--arg "-w all"
+-arg "-w all" -docroot friendship
 theories/adj_matrix_props.v
