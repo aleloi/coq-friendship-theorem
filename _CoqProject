@@ -1,0 +1,2 @@
+-arg "-w all"
+theories/adj_matrix_props.v

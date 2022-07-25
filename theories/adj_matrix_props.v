@@ -204,13 +204,13 @@ Qed.
 (* Sen: kvadratrot till matris som diagonaliseras i samma bas,
    och har kvadratrötter som egenvärden (svårt) *)
 
-About diag_mx.
+(*About diag_mx.
 Search "block" matrix.
 Search "mx11".
 About row_mx.
 Locate "%:M".
 Print scalar_mx.
-
+*)
 (*
 Jag vill kunna definiera D som diagonalmatrisen
 *)
@@ -228,7 +228,7 @@ Definition cast {T1 T2 : nat} (H : T1 = T2)
   (f : nat -> Type) (x : f T1) :=
   eq_rect T1 (fun T3 : nat => f T3) x T2 H.
 
-About cast.
+(*About cast.*)
 (* No idea why I need the full-arg version @cast. {T1, T2} should be
 implicit (and Coq happily infers the holes), but I can't leave them
 out. 
@@ -296,7 +296,7 @@ Qed.
   Qed.
    *)
 
-  Print adj2.
+  (*Print adj2.*)
   Lemma adj2_block_form :
     adj2 = @block_mx _ 1 (n-1)%N 1 (n-1)%N
            (const_mx k%:R)     (const_mx 1)
@@ -308,10 +308,10 @@ Qed.
       |] //=.
     (* TODO: Check the rowmx / colmx, submx lemmas in matrix.v
        AND/OR read chapter 7 of the math-comp book. *)
-    About unsplitK.
+    (*About unsplitK.
     About lsubmx.
     Search 'I_1.
-    Print all_equal_to.
+    Print all_equal_to.*)
     (*ord1*)
      
   Admitted.
@@ -377,7 +377,6 @@ Qed.
 Lemma char_poly_adj2: char_poly adj2 =
   ('X - ((k + n - 1)%:R)%:P) * ('X - ((k - 1)%:R)%:P) ^+ (n - 1).
 Proof.
-  About simmx_charpoly.
   rewrite (simmx_charpoly P_unit diagonalizable_m).
   have adj2_trig : is_trig_mx adj2_diag
     by apply: (is_diag_mx_is_trig (diag_mx_is_diag _)).
@@ -476,3 +475,4 @@ Search "sqrt" -BinNums.Z -BinNums.N -nat.
 Print ssrnum.Num.ClosedField.
    *)
 
+End m_matrix_properties.
