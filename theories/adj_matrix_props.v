@@ -1,6 +1,9 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat choice seq.
-From mathcomp Require Import div fintype tuple finfun bigop fingroup perm.
-From mathcomp Require Import ssralg zmodp matrix mxalgebra poly polydiv mxpoly.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat ssrint.
+From mathcomp Require Import fintype (*tuple *) finfun bigop  (*fingroup perm*).
+From mathcomp Require Import ssralg zmodp matrix mxalgebra poly (* polydiv *)
+  mxpoly.
+
+Require Import Lia.
 
 From Hammer Require Import Hammer. (* for `hammer` *)
 From Hammer Require Import Tactics .
@@ -51,14 +54,13 @@ Proof.
 End sim_char_poly.
 
 
-Import GroupScope.
+(*Import GroupScope.*)
 Import GRing.Theory.
 Local Open Scope ring_scope.
 
 
 Section m_matrix_properties.
-  From mathcomp Require Import ssrint.
-  Require Import Lia.
+  
   (* Doesn't really work well for me. It times out or crashes the Coq
      process due to OOM.
 
@@ -301,20 +303,42 @@ Qed.
     adj2 = @block_mx _ 1 (n-1)%N 1 (n-1)%N
            (const_mx k%:R)     (const_mx 1)
            (const_mx 1)        ((const_mx 1) + (k - 1)%:R%:M).
-    apply/matrixP => i j.
-    rewrite !mxE.
-    case (split i) => [ (* forall o : 'I_1, *)
-        [[|adj2] e]
-      |] //=.
-    (* TODO: Check the rowmx / colmx, submx lemmas in matrix.v
-       AND/OR read chapter 7 of the math-comp book. *)
-    (*About unsplitK.
-    About lsubmx.
-    Search 'I_1.
-    Print all_equal_to.*)
-    (*ord1*)
-     
-  Admitted.
+    rewrite -(@submxK R 1 (n-1)%N 1 (n-1)%N adj2).
+
+    have -> : (@ulsubmx _ 1 _ 1 _ adj2) = const_mx k%:R.
+    {
+      apply/matrixP=> i j; rewrite !mxE .
+
+      have {i} {j} -> : lshift (n - 1) i == lshift (n - 1) j
+        by rewrite !ord1; apply/eqP.
+    
+      rewrite -{1}(mulr1n 1) -mulrnDr.
+      suff -> : (1 + (k - 1))%N = k by [].
+      {
+      by move: kge1; case k => [|k' _] //=;
+        rewrite /subn /subn_rec /addn /addn_rec; lia.
+      }
+    }
+    
+    have -> : (@ursubmx _ 1 _ 1 _ adj2) = const_mx 1. {
+      apply/matrixP=> i j; rewrite !mxE !ord1.
+      have -> : (lshift (n - 1) 0 == rshift 1 j) = false 
+        by rewrite eq_lrshift.
+      by rewrite mulr0n addr0.
+    }
+
+    have -> : (@dlsubmx _ 1 _ 1 _ adj2) = const_mx 1. {
+      apply/matrixP=> i j; rewrite !mxE !ord1.
+      have -> : (rshift 1 i == lshift (n-1) 0) = false 
+        by rewrite eq_rlshift.
+      by rewrite mulr0n addr0.
+    }
+
+    suff -> : (@drsubmx _ 1 _ 1 _ adj2) = const_mx 1 + (k - 1)%:R%:M by []. {
+      by apply/matrixP=> i j; rewrite !mxE eq_rshift.
+    }
+  Qed.
+
     
 Lemma D_m_P_eq : P *m adj2 = adj2_diag *m P.
 
