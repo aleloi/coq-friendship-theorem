@@ -3,6 +3,14 @@ From mathcomp Require Import fintype (*tuple *) finfun bigop  (*fingroup perm*).
 From mathcomp Require Import ssralg zmodp matrix mxalgebra poly (* polydiv *)
   mxpoly.
 
+From mathcomp Require Import algC.
+(*From mathcomp Require Import algC ssrnum closed_field.
+From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat eqtype seq choice.
+From mathcomp Require Import div fintype path bigop finset prime (*order*) ssralg.
+From mathcomp Require Import poly polydiv mxpoly generic_quotient countalg.
+From mathcomp Require Import ssrnum closed_field ssrint rat intdiv.
+From mathcomp Require Import algebraics_fundamentals.
+*)
 Require Import Lia.
 
 From Hammer Require Import Hammer. (* for `hammer` *)
@@ -28,6 +36,13 @@ Section sim_char_poly.
     set lift := map_mx (polyC_rmorphism F).
     have -> : lift (invmx V) = (invmx (lift V))
       by subst lift; rewrite map_invmx.
+    (* Testa senare; jag väntade aldrig klart 
+    (*Set Hammer PredictMethod "nbayes".*)
+    predict 1000. (* map_invmx är inte bland de 100 första.  *)
+    Set Hammer ATPLimit 500.
+    hammer.
+     *)
+      
 
     set theX := (@scalar_mx _ (S n) (polyX _)).
     have x_eq: theX = (lift V) *m theX *m (invmx (lift V)).
@@ -58,7 +73,7 @@ End sim_char_poly.
 Import GRing.Theory.
 Local Open Scope ring_scope.
 
-
+From mathcomp Require Import tuple.
 Section m_matrix_properties.
   
   (* Doesn't really work well for me. It times out or crashes the Coq
@@ -67,13 +82,15 @@ Section m_matrix_properties.
      From Hammer Require Import Hammer. (* for `hammer` *)
      From Hammer Require Import Tactics .  
    *)
-  
-  Context [R : GRing.Field.type]
-    (n k: nat) (kge1: k >=1) (nge1: n >= 1)
+  Definition R := algC.
+  Locate ">=".
+  Context
+    
+    (n k: nat) (kge1: (k >=1) %N) (nge1: (n >= 1) %N)
     (* Check the comments in ssralg.v for an explanation, or
        just print. Use together with 'charf0P'
      *)
-    (field_has_char_zero : [char R] =i pred0).
+    (*(field_has_char_zero : [char R] =i pred0) *).
 
   
   (* First attempt at defining the P matrix. Defined in block form below.
@@ -131,7 +148,8 @@ Lemma det_block [n1 n2: nat] (A: 'M[R]_n1) (B: 'M_(n1, n2))
   \det (block_mx A B C D) =
                       \det D * \det (A - B *m (pinvmx D) *m C).
 Proof.
-  clear n k nge1 kge1 field_has_char_zero.
+  (*Search GRing.char.*)
+  clear n k nge1 kge1 (*field_has_char_zero*).
   set block2 := (block_mx 1%:M 0 (-(pinvmx D)*m C) 1%:M).
     
   have block_2_det1 : (\det block2 = 1) by rewrite det_lblock !det1 mul1r.
@@ -187,16 +205,15 @@ Lemma P_unit : P \in unitmx.
       case n => [_|n' _] //= ;
                 rewrite subSS  /subn /subn_rec  PeanoNat.Nat.sub_0_r  unitfE .
 
-  suff aou: (@GRing.natmul R 1 (1 + n')) != 0.
+    
+  suff aou: (@GRing.natmul (ZmodType algC _ ) 1 (1 + n')) != 0.
   case: (odd n') => //=; rewrite ?expr1 ?expr0 ?unitrN1 ?unitr1;
                     apply: GRing.mulf_neq0;
                     [ exact (lreg_neq0 (lregN (@lreg1 _)))
-                    | exact aou|   |exact aou ].
-  
+                    | exact (aou )|   |exact (aou) ].
   exact (oner_neq0 _).
   
-  by rewrite -[(1+n')%N]/n'.+1  (iffLR (charf0P _)
-                                   field_has_char_zero _).
+  by rewrite -[(1+n')%N]/n'.+1  (iffLR (charf0P _) Cchar _).
 Qed.
 
 (* Nästa steg: m diagonaliseras med P *)
@@ -245,7 +262,7 @@ substitution.
           (@const_mx R _ _ (k-1)%:R : 'rV_(n-1))).*)
 
 Definition diag_vec : 'rV[R]_(1 + (n-1)) :=
-  (row_mx ((k+n-(S O))%:R%:M : 'rV_1)
+  (row_mx ((k+n-1)%:R%:M : 'rV_1)
      (@const_mx R _ _ (k-1)%:R : 'rV_(n-1))).
 
 (*Definition D : 'M[R]_n := diag_mx diag_vec.*)
@@ -282,8 +299,8 @@ Qed.
   Qed.
   *)
 
-  Definition adj2 : 'M_(1 + (n-1))  := addmx (const_mx 1)
-                                      (@scalar_mx R _ (k-1)%:R).
+  Definition adj2 : 'M[R]_(1 + (n-1))  := (const_mx 1) +
+                                            (k-1)%:R%:M.
   (*Lemma m_is_ones_plus_I : m = adj2.
     (* Seems 3x longer than this should take *)
     rewrite /m /adj2 /addmx.
@@ -356,7 +373,7 @@ Lemma D_m_P_eq : P *m adj2 = adj2_diag *m P.
   have -> : (k + (n - 1))%N = (k + n -1)%N.
   rewrite /subn /subn_rec /addn /addn_rec;
     move: nge1. case: n => [|n'] _ //=; lia.
-  clear field_has_char_zero.
+  
   
   (* Bot left block: *)
   rewrite scalar_mxC mul_scalar_mx scalemx_const mulr1.
@@ -424,6 +441,7 @@ Proof.
   }
 
   by rewrite !big_const_ord !iter_mulr !mulr1 expr1.
+  
 Qed.
 
 (* TO BE moved; just typing it out to se how it would look like
@@ -431,9 +449,11 @@ Qed.
    \prod_(r <- seq) ('X - r)
    or with matrices and ordinals?
  *)
-From mathcomp Require Import tuple.
+(*From mathcomp Require Import tuple.*)
+
+
 Lemma polys_and_squares_technical_lemma
-  d (λs μs: d.-tuple R) (p q: poly_ringType R):
+  d (λs μs: d.-tuple R) (p q: poly_ringType algCring):
   p = \prod_(λ <- λs) ('X - λ%:P) ->
   (p \Po ( 'X^2 )) = \prod_(μ <- μs) ('X - (μ^2) %:P) ->
      { μs' : d.-tuple R |
@@ -441,19 +461,131 @@ Lemma polys_and_squares_technical_lemma
          (forall i : 'I_d, (tnth μs' i) ^2 = (tnth λs i)^2)
          }.
   (* Polynomial with 'X substituted to 'X^2 *)
-Admitted.                            
+Admitted.
+(*About polys_and_squares_technical_lemma.*)
 
 Definition is_square_root A := A *m A = adj2.
 (*From mathcomp Require Import seq.*)
 
 
-Lemma adj_mtx_char_poly mtx (μs: n.-tuple R) :
-  is_square_root mtx ->
-  char_poly mtx = \prod_(μ <- μs) ('X - μ %:P) ->
+Lemma adj_mtx_char_poly adj :
+  is_square_root adj ->
+  (*char_poly mtx = \prod_(μ <- μs) ('X - μ %:P) ->*)
   { μs' : (1+(n-1)).-tuple R |
-    char_poly mtx = \prod_(μ <- μs') ('X - μ %:P) &
+    char_poly adj = \prod_(μ <- μs') ('X - μ %:P) &
       map_tuple (fun x => x^2) μs' = cons_tuple (k + n - 1)%:R
                                        (nseq_tuple (n-1) (k - 1)%:R)
   }.
-Admitted.
+Proof.
+  move=> adj2_eq.
+  set p := char_poly adj.
+  have [μs' prop] := closed_field_poly_normal p.
+  rewrite (monicP (char_poly_monic adj)) scale1r in prop.
+  have deg_p := size_char_poly adj.
+  have size_μs' : (seq.size μs') == (1 + (n-1))%N by
+    subst p; rewrite prop size_prod_XsubC  in deg_p; apply /eqP; congruence.
+  clear deg_p.
+  simpl in *.
+  set tμs' := (@Tuple _ _ μs' size_μs').
+  have tp : p = \prod_(z <- tμs') ('X - z%:P)
+    by rewrite prop; apply: eq_bigr.
+
+  have p_X2 : p \Po 'X^2 = \prod_(μ <- tμs') ('X^2 - μ%:P) by
+  rewrite tp (big_endo (fun q=> q\Po 'X^2)
+             (fst (comp_poly_multiplicative 'X^2) )
+             (snd (comp_poly_multiplicative 'X^2) )
+          );
+    apply/eq_bigr => μ _;
+                     rewrite comp_polyD comp_polyX -polyCN comp_polyC.
+
+  set p_μ2 := (\prod_(μ <- tμs') ('X^2 - (μ%:P)^2) : {poly algC}).
+  have p_μ2_eq : p_μ2 = (\prod_(μ <- tμs') ('X - (μ%:P))) *
+                          (\prod_(μ <- tμs') ('X + (μ%:P))) . {
+    subst p_μ2;
+      rewrite (eq_bigr (fun μ => ('X - μ%:P) * ('X + μ%:P))) //=. {
+      by rewrite big_split //=.
+    }
+    by move=> μ _; rewrite subr_sqr.
+  }
+
+  rewrite -tp in p_μ2_eq.
+  have μs_det :
+    \prod_(μ <- tμs') ('X + μ%:P) =
+      \det ('X%:M + map_mx polyC adj). {
+
+Abort.
+
+
+
+(*
+Lemma algC_comm {F: numClosedFieldType} (a b: F): a+b = b+a.
+  by rewrite addrC.
+Qed.
+Check (@algC_comm algCnumClosedField).
+Variable hej1 hej2 : algC.
+Check (algC_comm hej1 hej2).
+(* Fails: Check (@algC_comm algC).*)
+Local Open Scope C_core_scope.
+
+Print algCnumClosedField.
+Search algC.
+Search _ (Phant algC).
+Check (Phant Algebraics.Implementation.type).
+Print Algebraics.Exports.
+Check (NumClosedFieldType algC Algebraics.Implementation.conjMixin).
+Canonical numClosedFieldType := NumClosedFieldType algC Algebraics.Implementation.conjMixin.
+
+Set Printing All.
+Search GRing.char.
+
+
+
+Print Algebraics.Exports.
+Print algC.
+Eval simpl in
+  mathcomp.field.algC.Algebraics.Implementation.numClosedFieldType.
+
+Print Algebraics.Implementation.type.
+Print mathcomp.field.algC.Algebraics.Exports.algC.
+About Algebraics.Implementation.normedZmodType.
+About Fundamental_Theorem_of_Algebraics.
+Search "normedZmodType".
+Print Algebraics.Implementation.normedZmodType.
+Check (normedZmodType algC).
+(* How to use algC? How do I get that it's a closed field ? How do I
+   use square roots?
+
+This says that there is a 'numClosedFieldType'.
+Algebraics.Implementation.numClosedFieldType: numClosedFieldType
+
+(also this: algCnumClosedField)
+
+This says that 'numClosedFieldType' implies closedFieldType.
+Num.ClosedField.numField_closedFieldType:
+  numClosedFieldType -> closedFieldType
+Num.ClosedField.closedFieldType: numClosedFieldType -> closedFieldType
+Num.ClosedField.normedZmod_closedFieldType:
+  numClosedFieldType -> closedFieldType
+Num.ClosedField.porder_closedFieldType: numClosedFieldType -> closedFieldType
+Num.ClosedField.numField_decFieldType: numClosedFieldType -> decFieldType
+
+This says that 'algC' is normedZmodType:
+Algebraics.Implementation.normedZmodType: normedZmodType algC
+*)
+
+Search numClosedFieldType.
+Algebraics.Implementation.numClosedFieldType: numClosedFieldType
+
+Search closed_field_poly_normal.
+Search closedFieldType.
+Search algC.
+Search "sqrtC".
+
+About Num.Theory.sqrtC.
+About closedFieldType.
+About imaginary_exists.
+About solve_monicpoly.
+ *)
+  
+
 End m_matrix_properties.
