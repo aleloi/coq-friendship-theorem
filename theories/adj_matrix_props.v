@@ -490,8 +490,8 @@ Proof.
   have tp : p = \prod_(z <- tμs') ('X - z%:P)
     by rewrite prop; apply: eq_bigr.
 
-  have p_X2 : p \Po 'X^2 = \prod_(μ <- tμs') ('X^2 - μ%:P) by
-  rewrite tp (big_endo (fun q=> q\Po 'X^2)
+  have p_X2 : p \Po 'X^2 = \prod_(μ <- tμs') ('X^2 - μ%:P)
+  by rewrite tp (big_endo (fun q=> q\Po 'X^2)
              (fst (comp_poly_multiplicative 'X^2) )
              (snd (comp_poly_multiplicative 'X^2) )
           );
@@ -509,10 +509,90 @@ Proof.
   }
 
   rewrite -tp in p_μ2_eq.
-  have μs_det :
-    \prod_(μ <- tμs') ('X + μ%:P) =
-      \det ('X%:M + map_mx polyC adj). {
+  have μs_subst :
+    \prod_(μ <- tμs') ('X + μ%:P) = ((-1)^+(1+(n-1)))%:P * (p \Po (-'X)). {
+    clear  p_X2 p_μ2 p_μ2_eq adj2_eq  k kge1.
+    rewrite (eq_bigr (fun μ => (-1)*(-'X - μ%:P))); last first.
+    by move=>  μ _; rewrite mulrDr !mulN1r !opprK.
+    rewrite big_split //=.
+    
+    have  -> : (\prod_(i <- μs') -1) =
+                  ((-1)^+(1+(n-1))). {
+      move=> RR.
+      clear prop tμs' tp p  adj .
+      have <- : seq.size μs' = (1 + (n - 1))%N by apply: eqP; exact size_μs'.
+      clear size_μs'.
+      elim: μs' => [|μs''].
+      by rewrite -signr_odd  expr0 big_nil.
+      move=> l indL.
+      rewrite big_cons indL.
+      rewrite -exprS.
+      suff -> : (seq.size l).+1 = seq.size (μs'' :: l) by [].
+      sauto.
+    }
+    have -> : (-1) ^+ (1 + (n - 1)) = ((-1) ^+ (1 + (n - 1)))%:P. {
+      clear prop tμs' tp  p adj .
+      move=> RR.
+      generalize ((1 + (n - 1)%N)%N) => nn.
+      rewrite -signr_odd -[in RHS]signr_odd.
+      case: (odd nn) => //=; rewrite ?expr0 ?expr1.
+      by rewrite rmorphN1.
+    }
+     
+    rewrite prop.
+    rewrite (big_endo (fun q=> q \Po (-'X))
+             (fst (comp_poly_multiplicative (-'X) ))
+             (snd (comp_poly_multiplicative (-'X) ))
+            ).
+    rewrite [in RHS](eq_bigr (fun μ => -'X - μ%:P)) //=; last first. {
+      move => μ _.
+      by rewrite comp_polyB comp_polyX comp_polyC.
+    } 
+  }
+  
+  rewrite {}μs_subst in p_μ2_eq.
+  have pNx_det : p \Po - 'X = \det ( -('X%:M) - map_mx polyC adj ). {
+    clear k kge1 nge1 adj2_eq μs' prop size_μs' tμs' tp p_X2 p_μ2 p_μ2_eq.
+    rewrite /p /char_poly /char_poly_mx -det_map_mx //=.
+    suff -> : map_mx (comp_poly (- 'X)) ('X%:M - map_mx polyC adj) =
+                - 'X%:M - map_mx polyC adj by []. {
+      rewrite map_mxD //= map_scalar_mx  //= comp_polyX rmorphN //=.
+      suff -> : map_mx (comp_poly (- 'X)) (- map_mx polyC adj) = - map_mx polyC adj
+        by []. {
+        rewrite rmorphN //=  -map_mx_comp //=.
+        suff -> : map_mx (comp_poly (- 'X) \o polyC) adj = map_mx polyC adj by []. {
+          suff : comp_poly (- 'X) \o polyC =1 polyC 
+            by move=> comp_comp;
+            apply/matrixP => i j;
+                             rewrite !mxE (comp_comp _).
+          by move=> R {p adj } c //=;
+                      rewrite comp_polyC.
+        }
+      }
+    }
+  }
+  rewrite {}pNx_det in p_μ2_eq.
+  have p_μ2_det : p_μ2 = \det (('X^2)%:M  - map_mx polyC adj2). {
+    subst p; rewrite {}p_μ2_eq.
+    clear  μs' prop size_μs' tμs' tp p_X2 p_μ2.
+    have -> : ((-1) ^+ (1 + (n - 1)))%:P = ((-1) ^+ (1 + (n - 1))). {
+      generalize ((1 + (n - 1))%N).
+      move=> nn R. 
+      rewrite -signr_odd -[in RHS]signr_odd.
+      case: (odd nn) => //=; rewrite ?expr0 ?expr1.
+      by rewrite rmorphN1.
+    }
+    by rewrite -detZ scaleN1r opprB opprK  /char_poly /char_poly_mx
+            -det_mulmx  mulmxDl !mulmxDr  -rmorphN //= -scalar_mxM;
+    apply: f_equal;
 
+    rewrite [in X in X + _]addrC  expr2
+      [in X in _ + _ + X]addrC addrA  map_mxN //=  comm_mx_scalar
+            -[in X in X + (- _ *m _)]addrA -mulmxDr addrN mulmx0 addr0;
+    apply: f_equal;
+    rewrite -adj2_eq  map_mx_is_multiplicative //=  mulNmx.
+  }
+  clear p_μ2_eq p_X2.
 Abort.
 
 
