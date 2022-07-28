@@ -415,6 +415,7 @@ Lemma diagonalizable_m : adj2 ~_P adj2_diag.
                      |  exact D_m_P_eq].
 Qed.
 
+
 Lemma char_poly_adj2: char_poly adj2 =
   ('X - ((k + n - 1)%:R)%:P) * ('X - ((k - 1)%:R)%:P) ^+ (n - 1).
 Proof.
@@ -444,6 +445,21 @@ Proof.
   
 Qed.
 
+Definition lams : (1+(n-1)).-tuple algC := cons_tuple (k + n - 1)%:R
+                   (nseq_tuple (n-1) (k - 1)%:R). 
+Lemma lams_prod: char_poly adj2 = \prod_(l <- lams) ('X - l%:P).
+  rewrite char_poly_adj2  /lams big_cons.
+  apply: f_equal.
+  rewrite big_tnth.
+  rewrite (eq_bigr (fun => ('X-((k - 1)%:R) %:P))); last first. {
+    move=> i _.
+    by rewrite tvalK  tcastE tnth_nseq.
+  }
+  by rewrite big_const_ord iter_mulr mulr1  size_tuple.
+Qed.
+
+  
+
 (* TO BE moved; just typing it out to se how it would look like
    Questions: how do I write polynomial root products? As
    \prod_(r <- seq) ('X - r)
@@ -453,12 +469,12 @@ Qed.
 
 
 Lemma polys_and_squares_technical_lemma
-  d (λs μs: d.-tuple R) (p q: poly_ringType algCring):
+  d (λs μs: d.-tuple R) (p : poly_ringType algCring):
   p = \prod_(λ <- λs) ('X - λ%:P) ->
-  (p \Po ( 'X^2 )) = \prod_(μ <- μs) ('X - (μ^2) %:P) ->
+  (p \Po ( 'X^2 )) = \prod_(μ <- μs) ('X^2 - (μ^2) %:P) ->
      { μs' : d.-tuple R |
        ((\prod_(μ <- μs ) ('X - μ%:P)) = (\prod_(μ' <- μs' ) ('X - μ'%:P))) &
-         (forall i : 'I_d, (tnth μs' i) ^2 = (tnth λs i)^2)
+         (forall i : 'I_d, (tnth μs' i) ^2 = (tnth λs i))
          }.
   (* Polynomial with 'X substituted to 'X^2 *)
 Admitted.
@@ -593,7 +609,48 @@ Proof.
     rewrite -adj2_eq  map_mx_is_multiplicative //=  mulNmx.
   }
   clear p_μ2_eq p_X2.
-Abort.
+  set q := char_poly adj2.
+  have p_μ2_q : p_μ2 = q \Po 'X^2. {
+    rewrite p_μ2_det /q /char_poly /char_poly_mx  -det_map_mx //=.
+    apply: f_equal.
+
+    rewrite [in RHS]map_mxD //= [in RHS]map_scalar_mx  //= comp_polyX.
+    rewrite rmorphN //=.
+    repeat apply: f_equal.
+
+    suff -> : map_mx (comp_poly ('X^2)) ( map_mx polyC adj2) = map_mx polyC adj2
+        by []. {
+      rewrite  -map_mx_comp //=.
+      by apply/matrixP => i j; rewrite !mxE //= comp_polyC.
+    }
+  }
+
+  have aoeu : q \Po 'X^2 = \prod_(μ <- tμs') ('X^2 - (μ ^ 2)%:P). {
+    rewrite -p_μ2_q /p_μ2.
+    suff : forall μ, (μ ^ 2)%:P = (μ%:P ^ 2 : {poly algC}). {
+      move=> hyp.
+      apply eq_bigr => μ _.
+      by rewrite (hyp μ).
+    } {
+      move=> μ.
+      by rewrite !exprSzr !expr0z !mul1r  polyC_multiplicative.
+    }
+  }
+
+  have [μs prop2 prop3] := (polys_and_squares_technical_lemma lams_prod aoeu).
+  exists μs. {
+    by rewrite tp prop2.
+  } {
+    
+    apply: eq_from_tnth => i.
+    rewrite tnth_map  (prop3 i).
+    case: (split_ordP i) => [j ->| j ->]. {
+      by rewrite ord1 lshift0  tnth0.
+    } {
+      by rewrite rshift1 tnthS.
+    }
+  }
+Qed.
 
 
 
