@@ -18,6 +18,7 @@ My ambition is to prove the [Friendship Theorem](https://math.mit.edu/~apost/cou
 	* [building](https://coq.inria.fr/refman/practical-tools/utilities.html#building-a-coq-project-with-coq-makefile)
 	* [documenting](https://coq.inria.fr/refman/using/tools/coqdoc.html)
 	* [packaging](https://coq.inria.fr/opam-packaging.html)
+	* This [SO post](https://stackoverflow.com/questions/53822753/coqide-error-with-exporting-modules-in-the-same-library) about importing 
 * The proof:
   * Relate the characteristic polynomial of `sqrt(A)` given that of `A`. I think this can only be done in algebraically closed fields (or maybe fields where `x^2 = a` is always solvable for `x`). The other direction (polynomial for `A^2` from that of `A`) should always hold (and be easier to prove?). Write a pen-and-paper version and go from there.
   * Once I have the `A` charpoly, I have to figure out how to go from identities in a field to identities in `nat`. Pen-and-paper version of this too?
