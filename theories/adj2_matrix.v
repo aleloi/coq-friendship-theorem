@@ -7,8 +7,8 @@ From mathcomp Require Import algC.
 Require Import Lia.
 From Hammer Require Import Tactics .
 
-
-Load matrix_lemmas.
+Require Import Friendship.square_char_poly.
+Require Import Friendship.matrix_lemmas.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -235,7 +235,7 @@ Section adj2_matrix_props.
   Definition is_square_root A := A *m A = adj2.
   (*From mathcomp Require Import seq.*)
 
-  Load square_char_poly.
+  
 
   Lemma adj_mtx_char_poly adj :
     is_square_root adj ->

@@ -1,4 +1,4 @@
--arg "-w all"  -Q . friendship
+-arg "-w all"  -R theories Friendship
 theories/matrix_lemmas.v
 theories/adj2_matrix.v
 theories/square_char_poly.v

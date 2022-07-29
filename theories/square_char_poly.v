@@ -4,7 +4,7 @@ From mathcomp Require Import ssralg zmodp matrix mxalgebra poly polydiv
   mxpoly.
 
 From mathcomp Require Import algC.
-
+From Hammer Require Import Tactics .
 (*Load matrix_lemmas.*)
 (*Load adj2_matrix.*)
 
@@ -40,9 +40,9 @@ Section square_polys.
     destruct μs as [μs μs_len].
     destruct λs as [λs λs_len].
     simpl.
-    move:d λs λs_len μs_len.
-    elim: μs => [d λs λs_eq μs_sz p_eq p_subst_eq|
-                  μ μs  indH d λs λs_eq μs_eq p_eq p_subst_eq]. {
+    move:d λs λs_len μs_len p.
+    elim: μs => [d λs λs_eq μs_sz p p_eq p_subst_eq |
+                  μ μs  indH d λs λs_eq μs_eq p p_eq p_subst_eq ]. {
       have d0 : d = 0%N. {
         transitivity (@seq.size algC nil).
         symmetry.
@@ -61,19 +61,28 @@ Section square_polys.
         rewrite (ltn0 m) in le0. congruence.
       }
     }
+    move: μ μs  indH λs λs_eq μs_eq p p_eq p_subst_eq.
+    case: d => [|d']. {
+      move=> μ μs _   λs λs_eq μs_eq.
+      exfalso.
+      sauto.
+    }
+    move=> μ μs  indH λs λs_eq μs_eq p p_eq p_subst_eq.
     rewrite big_cons in p_subst_eq.
 
-    have p_subst_λs : p \Po 'X^2 = \prod_(λ <- λs) ('X^2 - λ%:P).
-
-    rewrite p_eq.
-    rewrite (big_endo (fun q=> q \Po ('X^2))
-               (fst (comp_poly_multiplicative _ ))
-               (snd (comp_poly_multiplicative _ ))
-            ).
-    rewrite (eq_bigr (fun λ=>('X^2 - λ%:P))). { by [].} {
-      simpl; move=> λ _.
-      by rewrite comp_polyB comp_polyX comp_polyC.
+    have p_subst_λs : p \Po 'X^2 = \prod_(λ <- λs) ('X^2 - λ%:P). {
+    
+      rewrite p_eq.
+      rewrite (big_endo (fun q=> q \Po ('X^2))
+                 (fst (comp_poly_multiplicative _ ))
+                 (snd (comp_poly_multiplicative _ ))
+              ).
+      rewrite (eq_bigr (fun λ=>('X^2 - λ%:P))). { by []. } {
+        simpl; move=> λ _.
+        by rewrite comp_polyB comp_polyX comp_polyC.
+      }
     }
+    have p_subst2 :  p \Po 'X^2 = \prod_(λ <- λs) ('X^2 - λ%:P) by [].
     have μ_fct: ('X - μ %:P) %| p \Po 'X^2. {
       rewrite p_subst_eq.
       apply: Pdiv.Idomain.dvdp_mulr.
@@ -90,7 +99,7 @@ Section square_polys.
       have /negPn μ_root_px2 : root (p \Po 'X^2) μ
         by rewrite root_factor_theorem.
       rewrite p_subst_λs in μ_root_px2.
-      About big_map_id.
+      (*About big_map_id.*)
       set h := fun (λ: RR)=>'X^2 - λ%:P.
       have prods_eq: \prod_(λ <- λs) ('X^2 - λ%:P) =
                    \prod_(pλ <- seq.map h λs) pλ
@@ -107,7 +116,7 @@ Section square_polys.
       apply /(seq.has_nthP 1).
       exists i.
       rewrite seq.size_map in i_le_d; exact i_le_d.
-      About seq.nth_map.
+      (*About seq.nth_map.*)
       rewrite (seq.nth_map 1) in is_root; last first. {
         rewrite seq.size_map in i_le_d; exact i_le_d.
       }
@@ -149,32 +158,129 @@ Section square_polys.
     rewrite μ_lamda in p_subst_eq.
     set λs' := seq.cat (seq.take i_μ λs) (seq.drop i_μ.+1 λs).
     rewrite -/λs' in p_subst_λs.
+    have x2_ne0 : ('X^2 - λ%:P) != 0. {
+      suff : lead_coef ('X^2 - λ%:P) = 1. {
+        move=> aoeu.
+        apply rreg_lead0.
+        rewrite aoeu.
+        apply rreg1.
+      }
+      rewrite lead_coefDl.
+      apply lead_coefXn.
+      rewrite size_polyXn size_opp.
+      rewrite size_polyC.
+      case : (λ != 0) => [|] //=.
+    }
     have p_red_eq: \prod_(j <- μs) ('X^2 - (j ^ 2)%:P) =
                      \prod_(j <- λs') ('X^2 - j%:P). {
-      have ne0 : ('X^2 - λ%:P) != 0. {
-        suff : lead_coef ('X^2 - λ%:P) = 1. {
-          move=> aoeu.
-          apply rreg_lead0.
-          rewrite aoeu.
-          apply rreg1.
-        }
-        rewrite lead_coefDl.
-        apply lead_coefXn.
-        rewrite size_polyXn size_opp.
-        rewrite size_polyC.
-        case : (λ != 0) => [|] //=.
-      }
-
-      
-      apply (mulfI ne0).
+      apply (mulfI x2_ne0).
       by rewrite -p_subst_λs  p_subst_eq.
     }
     have μs_size_λs : seq.size μs == seq.size λs'. {
-      admit.
+      apply /eqP.
+      suff : (seq.size (μ :: μs)) = (seq.size λs').+1 by sauto.
+      move: μs_eq.
+      move=>  /eqP ->.
+      suff -> : d'.+1 = seq.size λs_p by
+        rewrite /λs_p //=.
+      rewrite -(seq.perm_size  λs_perm).
+      symmetry.
+      by apply /eqP.
     }
-    Check (indH _ λs' (eq_refl _) μs_size_λs).
     
+
+    set p' := \prod_(λ <- λs') ('X - λ%:P).
+    have p'_eq : p' \Po 'X^2 = \prod_(μ <- μs) ('X^2 - (μ ^ 2)%:P). {
+      apply (mulfI x2_ne0).
+      (*Set Printing Implicit.*)
+      rewrite -p_subst_eq.
       
+      have -> : ('X^2 - λ%:P) = ('X-λ%:P) \Po 'X^2. {
+        by rewrite comp_polyB comp_polyX comp_polyC.
+      } 
+      rewrite -comp_polyM /p'.
+      
+      have -> : ('X - λ%:P) * \prod_(λ0 <- λs') ('X - λ0%:P) =
+                  \prod_(λ0 <- (cons λ  λs')) ('X - λ0%:P) by
+        rewrite big_cons.
+      
+      by rewrite -/λs_p -(perm_big _ λs_perm) //=  -p_eq.
+    }
+      
+    
+    elim: (indH _ λs' (eq_refl _) μs_size_λs _ (Logic.eq_refl p')
+             p'_eq
+          ) => [μs'' p_prod roots_spec ].
+
+    have sz_μs : seq.size μs'' = d'.
+    transitivity (seq.size λs').
+    by rewrite size_tuple.
+    suff  : d'.+1 = seq.size λs_p by sauto. {
+      rewrite -(seq.perm_size  λs_perm).
+      symmetry.
+      by apply /eqP.
+    }
+
+    set μ_μs'' := (cons_tuple μ  μs'' ).
+    have tup_sz : (seq.size λs').+1 = d'.+1. {
+      apply f_equal.
+      by rewrite -sz_μs size_tuple.
+    }
+    exists (tcast tup_sz μ_μs''). {
+      rewrite val_tcast !big_cons.
+      apply f_equal.
+      exact p_prod.
+    } {
+      (*have d_eq : d'.+1 = (1 + d')%N by [].*)
+      move=> i.
+      (*rewrite tcastE.*)
+      
+      case: (@split_ordP 1 d' i) => [j ->| j ->]. {
+        rewrite ord1 lshift0.
+        admit.
+        (*rewrite tnth0.*)
+      } {
+        admit.
+        (*by rewrite rshift1 tnthS.*)
+      }
+Admitted.      
+      (*
+      Search tnth tcast.
+      
+      Search tcast .
+      
+      About f_equal.
+      
+    rewrite (f_equal (fun x => x.+1) sz_μs).
+    rewrite (f_equal sz_μs).
+
+    clear indH p p_eq p_subst2 μ_fct p_subst_eq p_subst_λs λs_p λs_perm
+      root_of_λs λ μ_lamda x2_ne0.
+
+    exists (tcast eq_mn t
+    Check tcastE.
+    
+    rewrite sz_λs in λs''.
+    
+    rewrite seq.size_cat.
+    have : i_μ < seq.size λs. {
+      rewrite seq.has_find in root_of_λs.
+      exact root_of_λs.
+    }
+    rewrite seq.size_takel.
+    Search seq.size seq.drop.
+    Search seq.size seq.take.
+    Search seq.size seq.cat.
+    (*
+      Define 'p' to be the product 
+     *)
+    Check bigID.
+    (* THE ONE I need is bigID!!! *)
+    
+    Search bigop Monoid.com_law.
+    Check big_split.
+    Search bigop negb.
+    Print Monoid.law.
     Search bigop cons.
     rewrite big_cons in p_eq.
     apply indH.
@@ -230,7 +336,7 @@ seq.split_find:
       Search comp_poly
     (* Polynomial with 'X substituted to 'X^2 *)
   Admitted.
-
+*)
 End square_polys.
   
 
