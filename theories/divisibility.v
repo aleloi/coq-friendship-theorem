@@ -25,16 +25,11 @@ Local Open Scope ring_scope.
 From mathcomp Require Import ssrnum closed_field ssrint rat intdiv order.
   From mathcomp Require Import algebraics_fundamentals.
 
-
-About adj2.
-
 From mathcomp Require Import tuple seq.
 
 Section div.
   Variable n k: nat.
   Definition adj2n := adj2 n k.
-
-  About is_square_root.
   
   Context (kge1: (k >=1) %N) (nge1: (n >= 1) %N) (A: 'M[R]_(1+(n-1)))
     (A_sqr : is_square_root k A) (A_tr0 : \tr A = 0)
@@ -42,12 +37,7 @@ Section div.
 
   
   Import Num.Theory.
-  Search sqrtC.
-  About sqrtC.
-  (*Check (_.-root : nat -> algC -> algC).*)
-  Check (sqrtC _).
-  Search sqrtC.
-
+  
   (* Kanske Num.nneg ?
      Vet också (x2 \is Num.nneg)
    *)
@@ -74,7 +64,7 @@ Section div.
     elim: l => [nn| l0 l indH nn allH] //=.
     move: allH; move=> /andP [sz allH].
     apply (elimT eqP) in sz.
-    move: nn sz allH => [| nn] [sz allH]; [by sauto |].
+    move: nn sz allH => [| nn] sz allH; [by sauto |].
     move: allH; move=> /andP [pl0x allH].
     apply (introT eqP) in sz.
     apply /andP. 
@@ -145,8 +135,7 @@ Section div.
     lia.
   Qed.
 
-  Locate "%|".
-  About dvdz.
+    
   Local Open Scope int_scope.
   
   Lemma tr_adj_rel :
@@ -174,7 +163,6 @@ Section div.
     
     rewrite big_cons in eigvals_sum0.
     move: props. move => /andP [μ_sq props].
-    About sum_of_roots.
     rewrite (sum_of_roots props) //= in eigvals_sum0.
     set a := count
                (fun i : 'I_(size μs) =>
