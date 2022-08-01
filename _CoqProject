@@ -1,4 +1,8 @@
--arg "-w all"  -R theories Friendship
+-Q theories Friendship
+-arg -w -arg -notation-overridden
+
 theories/matrix_lemmas.v
 theories/adj2_matrix.v
 theories/square_char_poly.v
+theories/bigops.v
+theories/divisibility.v

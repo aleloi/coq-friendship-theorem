@@ -18,12 +18,11 @@ Unset Printing Implicit Defensive.
 Import GRing.Theory.
 Local Open Scope ring_scope.
 
-From mathcomp Require Import tuple.
+From mathcomp Require Import tuple seq.
 Section adj2_matrix_props.
   
   
   Definition R := algC.
-  Locate ">=".
   Context (n k: nat) (kge1: (k >=1) %N) (nge1: (n >= 1) %N).
   
   Definition matN := 'M[R]_(1%N + (n-1)%N).
@@ -242,8 +241,8 @@ Section adj2_matrix_props.
     (*char_poly mtx = \prod_(μ <- μs) ('X - μ %:P) ->*)
     { μs' : (1+(n-1)).-tuple R |
       char_poly adj = \prod_(μ <- μs') ('X - μ %:P) &
-        map_tuple (fun x => x^2) μs' = cons_tuple (k + n - 1)%:R
-                                         (nseq_tuple (n-1) (k - 1)%:R)
+        all2 (fun μ λ => μ^2 == λ) μs' (cons_tuple (k + n - 1)%:R
+                                         (nseq_tuple (n-1) (k - 1)%:R))
     }.
   Proof.
     move=> adj2_eq.
@@ -353,13 +352,12 @@ Section adj2_matrix_props.
       }
       by rewrite -detZ scaleN1r opprB opprK  /char_poly /char_poly_mx
          -det_mulmx  mulmxDl !mulmxDr  -rmorphN //= -scalar_mxM;
-                                                                      apply: f_equal;
-
-                                                                      rewrite [in X in X + _]addrC  expr2
-                                                                        [in X in _ + _ + X]addrC addrA  map_mxN //=  comm_mx_scalar
-                                                                      -[in X in X + (- _ *m _)]addrA -mulmxDr addrN mulmx0 addr0;
-                                                                      apply: f_equal;
-                                                                      rewrite -adj2_eq  map_mx_is_multiplicative //=  mulNmx.
+         apply: f_equal;
+         rewrite [in X in X + _]addrC  expr2
+           [in X in _ + _ + X]addrC addrA  map_mxN //=  comm_mx_scalar
+         -[in X in X + (- _ *m _)]addrA -mulmxDr addrN mulmx0 addr0;
+         apply: f_equal;
+         rewrite -adj2_eq  map_mx_is_multiplicative //=  mulNmx.
     }
     clear p_μ2_eq p_X2.
     set q := char_poly adj2.
@@ -390,20 +388,12 @@ Section adj2_matrix_props.
       }
     }
 
-    have [μs prop2 prop3] := (polys_and_squares_technical_lemma lams_prod aoeu).
+    have [μs prop2 prop3] := (polys_and_squares_technical_lemma lams_prod aoeu). 
     exists μs. {
       by rewrite tp prop2.
     } {
-      
-      apply: eq_from_tnth => i.
-      rewrite tnth_map  (prop3 i).
-      case: (split_ordP i) => [j ->| j ->]. {
-        by rewrite ord1 lshift0  tnth0.
-      } {
-        by rewrite rshift1 tnthS.
-      }
+      exact prop3.
     }
   Qed.
 
-  
 End adj2_matrix_props.

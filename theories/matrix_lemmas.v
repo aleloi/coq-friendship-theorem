@@ -1,4 +1,4 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat ssrint.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat ssrint seq.
 From mathcomp Require Import fintype (*tuple *) finfun bigop  (*fingroup perm*).
 From mathcomp Require Import ssralg zmodp matrix mxalgebra poly (* polydiv *)
   mxpoly.
@@ -19,7 +19,7 @@ Section sim_char_poly.
   Local Open Scope ring_scope.
 
   Lemma charpoly_uconj n (V : 'M[F]_(n.+1)) (f : 'M_n.+1) :
-  V \in unitmx -> char_poly (conjmx V f) = char_poly f.
+    V \in unitmx -> char_poly (conjmx V f) = char_poly f.
   Proof.
     move=> Vu; apply/eqP.
     unfold char_poly, char_poly_mx; rewrite conjumx //  !map_mxM.
@@ -53,8 +53,39 @@ fixas ganska enkelt.
   
   Lemma simmx_charpoly {n} {P A B : 'M[F]_n.+1} : P \in unitmx ->
   A ~_P B -> char_poly A = char_poly B.
-Proof.
-  by move=> Pu /eqP<-; rewrite charpoly_uconj. Qed.
+  Proof.
+    by move=> Pu /eqP<-; rewrite charpoly_uconj. Qed.
+
+  (*  Doesn't fit in 'matrix lemmas'? *)
+  Lemma viete_sum n (μs: seq F)
+    : size μs = n.+1 -> (\prod_(μ <- μs)('X - μ%:P))`_n =
+                          - (\sum_(μ <- μs) μ).
+  Proof.
+    (* Could prbl do induction instead *)
+    move=> sz_μs.
+    
+    have -> : \prod_(μ <- μs) ('X - μ%:P) =
+                          char_poly (diag_mx
+                                       (\row_(j < size μs) μs`_j)). {
+      rewrite (char_poly_trig (diag_mx_is_trig _))  big_tnth.
+      rewrite (eq_bigr (fun i => ('X - (diag_mx (\row_j μs`_j) i i)%:P))). {
+        by []. } {
+        move=> i _.
+        apply: f_equal; apply: f_equal; apply: f_equal.
+        by rewrite /diag_mx !mxE eq_refl mulr1n (tuple.tnth_nth 0).
+      }
+    }
+    have n_eq: n = ((n.+1).-1) by [].
+    rewrite [in LHS]n_eq -sz_μs char_poly_trace.
+
+    apply: f_equal.
+    rewrite /mxtrace [in RHS]big_tnth.
+    rewrite (eq_bigr (fun i => tuple.tnth (tuple.in_tuple μs) i)). { by [].
+    } {
+      move=> i _. rewrite !mxE eq_refl mulr1n (tuple.tnth_nth 0).
+      by [].
+    } rewrite sz_μs. by [].
+    Qed.
 
 End sim_char_poly.
 
