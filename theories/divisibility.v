@@ -25,7 +25,9 @@ Local Open Scope ring_scope.
 From mathcomp Require Import ssrnum closed_field ssrint rat intdiv order.
   From mathcomp Require Import algebraics_fundamentals.
 
-From mathcomp Require Import tuple seq.
+  From mathcomp Require Import tuple seq.
+
+  From mathcomp Require Import div.
 
 Section div.
   Variable n k: nat.
@@ -139,7 +141,7 @@ Section div.
   Local Open Scope int_scope.
   
   Lemma tr_adj_rel :
-    Posz (k-1) %| Posz (k*k).
+     Posz (k-1) %| Posz (k*k).
   Proof.
     have trN : -\tr A = 0%R
       by rewrite A_tr0 oppr0.
@@ -209,5 +211,41 @@ Section div.
     apply: dvdz_mulr. apply: dvdz_mulr. apply: dvdzz.
   Qed.
 
-  (*Lemma k_is_1 *)
+  Local Open Scope nat_scope.
+  Lemma tr_adj_rel_nat :
+    (k-1)%N %| (k*k)%N.
+  Proof.
+    rewrite -(absz_nat (k*k)) -(absz_nat (k-1)) -dvdzE.
+    exact tr_adj_rel.
+  Qed.
+
+  Lemma k_is_2: k = 2%N.
+  Proof.
+    have kd_lem := tr_adj_rel_nat.
+    clear -kge1 kd_lem. 
+    have k1dk: (k-1) %| k. {
+      have div_k1k: (k-1) %| (k-1)*k
+        by exact  (dvdn_mulr _ (dvdnn _)).
+      rewrite -(dvdn_addl _ div_k1k).
+      have -> : k + (k - 1) * k = k * k  . {
+        move: kge1; clear; case: k => [| k'] _ //=.
+        rewrite /muln /addn /subn /addn_rec /muln_rec /subn_rec.
+        lia.
+      }
+      exact  kd_lem.
+    }
+    have k1d : k-1 %| 1. {
+      rewrite -(dvdn_addl _ (dvdnn (k - 1))).
+      have <- : k = 1 + (k-1)  . {
+        move: kge1; clear; case: k => [| k'] _ //=.
+        rewrite /muln /addn /subn /addn_rec /muln_rec /subn_rec.
+        lia.
+      }
+      exact k1dk.
+    }
+    rewrite dvdn1 in k1d.
+    move: k1d. move=>/eqP k1d.
+    sauto.
+  Qed.
 End div.
+
