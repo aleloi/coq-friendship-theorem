@@ -19,6 +19,9 @@ Import GRing.Theory.
 Local Open Scope ring_scope.
 
 From mathcomp Require Import tuple seq.
+
+Ltac ssrnat_lia := rewrite /subn /subn_rec /addn /addn_rec
+                     /muln /muln_rec; lia.
 Section adj2_matrix_props.
   
   
@@ -105,8 +108,8 @@ Section adj2_matrix_props.
       rewrite -{1}(mulr1n 1) -mulrnDr.
       suff -> : (1 + (k - 1))%N = k by [].
       {
-        by move: kge1; case k => [|k' _] //=;
-                                   rewrite /subn /subn_rec /addn /addn_rec; lia.
+        by move: kge1; case k => [|k' _] //=; ssrnat_lia.
+                                   
       }
     }
     
@@ -143,10 +146,8 @@ Section adj2_matrix_props.
       (mx11_scalar (const_mx (n-1)%:R))
       !mxE (mx11_scalar (k%:R%:M + (n - 1)%:R%:M)) mxE  !(mxE _ _ 0 0) //=
       !mulr1n -natrD.
-    have -> : (k + (n - 1))%N = (k + n -1)%N.
-    rewrite /subn /subn_rec /addn /addn_rec;
-      move: nge1. case: n => [|n'] _ //=; lia.
-    
+    have -> : (k + (n - 1))%N = (k + n -1)%N
+      by move:  nge1 => /ltP; ssrnat_lia.
     
     (* Bot left block: *)
     rewrite scalar_mxC mul_scalar_mx scalemx_const mulr1.
@@ -154,6 +155,7 @@ Section adj2_matrix_props.
       (@const_mx R (n-1) 1 k%:R + const_mx (-1)) = const_mx (k-1)%:R .
     apply/matrixP => i j; rewrite !mxE.
     move: kge1; case: k => [//| k' _].
+    
     by rewrite /subn /subn_rec //= PeanoNat.Nat.sub_0_r  [_.+1]/((1+k')%N) -/addn
          natrD addrC addrA (addNr 1) add0r.
     (* bot left block done *)
@@ -174,8 +176,8 @@ Section adj2_matrix_props.
     have -> : 1 + ((n - 1)%:R * 1 + (k - 1)%:R * 1) = ((k + n - 1)%:R :R).
     rewrite !mulr1  -{1}[in 1](mulr1n 1) -!natrD.
     suff -> : (1 + (n - 1 + (k - 1)))%N = (k + n - 1)%N by [].
-    by move: nge1 kge1; case n => [|n' _] //=; case k => [|k' _] //=;
-                                                           rewrite /subn /subn_rec /addn /addn_rec; lia.
+    by move: nge1 kge1 => /ltP nge1' /ltP kge1'; ssrnat_lia.
+
     (* Top right piece done *)
 
     (* Bot right piece *)

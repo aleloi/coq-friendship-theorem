@@ -6,3 +6,4 @@ theories/adj2_matrix.v
 theories/square_char_poly.v
 theories/bigops.v
 theories/divisibility.v
+theories/combinatorics.v

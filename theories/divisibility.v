@@ -131,10 +131,7 @@ Section div.
 
   Lemma kn_1 : (k+n-1)%N = (k*k)%N.
     rewrite {}nk_eq.
-    
-    move: kge1; case: k => [| k' _] //=.
-    rewrite /subn /addn /muln /subn_rec /addn_rec /muln_rec.
-    lia.
+    move: kge1 k => /ltP kge1' [|k']; ssrnat_lia.
   Qed.
 
     
@@ -151,8 +148,7 @@ Section div.
 
     have [μs char_poly props] := (adj_mtx_char_poly kge1 nge1 A_sqr).
     rewrite {}char_poly viete_sum in zero_char_poly; last first. {
-      simpl.
-      rewrite size_tuple /subn /subn_rec /addn /addn_rec. lia.
+      by rewrite size_tuple; ssrnat_lia.
     }
     
     have eigvals_sum0 : \sum_(μ <- μs) μ = 0%R. {
@@ -197,11 +193,7 @@ Section div.
     rewrite [in X in X * (a%:R - b%:R)] mulrC in sqrs.
     have nk_eq_ : (k + n - 1)%N = (k*k)%N. {
       rewrite nk_eq.
-      move: kge1 nge1. 
-      case: k => [| k'] //=.
-      case: n => [| n'] //=.
-      rewrite /muln /addn /subn /addn_rec /muln_rec /subn_rec.
-      lia.
+      move: kge1 nge1 k n => /ltP kge1' /ltP nge1' [|k'] [|n']; ssrnat_lia.
     }
     rewrite nk_eq_ in sqrs.
     clear -sqrs.
@@ -228,19 +220,13 @@ Section div.
         by exact  (dvdn_mulr _ (dvdnn _)).
       rewrite -(dvdn_addl _ div_k1k).
       have -> : k + (k - 1) * k = k * k  . {
-        move: kge1; clear; case: k => [| k'] _ //=.
-        rewrite /muln /addn /subn /addn_rec /muln_rec /subn_rec.
-        lia.
+        move: kge1 k => /ltP kge1' [| k']; ssrnat_lia.
       }
       exact  kd_lem.
     }
     have k1d : k-1 %| 1. {
       rewrite -(dvdn_addl _ (dvdnn (k - 1))).
-      have <- : k = 1 + (k-1)  . {
-        move: kge1; clear; case: k => [| k'] _ //=.
-        rewrite /muln /addn /subn /addn_rec /muln_rec /subn_rec.
-        lia.
-      }
+      have <- : k = 1 + (k-1) by move: kge1 =>  /ltP  ; ssrnat_lia.
       exact k1dk.
     }
     rewrite dvdn1 in k1d.
