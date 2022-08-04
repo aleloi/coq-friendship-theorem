@@ -20,7 +20,7 @@ Local Open Scope ring_scope.
 
 From mathcomp Require Import tuple seq.
 
-Ltac ssrnat_lia := rewrite /subn /subn_rec /addn /addn_rec
+Ltac ssrnat_lia := rewrite /leq /subn /subn_rec /addn /addn_rec
                      /muln /muln_rec; lia.
 Section adj2_matrix_props.
   

@@ -1,5 +1,7 @@
-From mathcomp Require Import ssreflect ssrbool ssrfun eqtype ssrnat div seq.
+(*From mathcomp Require Import ssreflect ssrbool ssrfun eqtype ssrnat div seq.
 From mathcomp Require Import choice fintype finfun bigop finset.
+*)
+From mathcomp Require Import all_ssreflect.
 
 From Hammer Require Import Tactics .
 From Hammer Require Import Hammer .
@@ -8,17 +10,30 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Section friendship_sec.
-    
-  Context (T: finType) (T_nonempty : [set: T] != set0)
-    (F: rel T) (Fsym: symmetric F) (Firr: irreflexive F)
-    (Co: forall (m n: T), m != n -> T)
-  
-  (Col : forall m n (mNn: m != n), F m (Co _ _ mNn))
-  (Cor : forall m n (mNn: m != n), F n (Co _ _ mNn))
-  (CoUnique : forall m n l (mNn: m != n), F m l -> F n l -> l = Co _ _ mNn).
+Require Import Friendship.adj2_matrix.
 
-  Lemma Co_sym m n (mNn: m != n) (nNm: n != m): Co mNn = Co nNm.
+Section friendship_sec.
+  
+  Context (T: finType) (T_nonempty :  [set: T] != set0)
+    (F: rel T) (Fsym: symmetric F) (Firr: irreflexive F)
+    (* I first tried with  "Co: forall (m n: T), m != n -> T"
+       but gave up when I wanted a total version, and couldn't prove that
+       it was equal to 'Co' whenever m != n *)
+    (Co: forall (m n: T), T)
+  
+  (Col : forall m n (mNn: m != n), F m (Co m n))
+  (Cor : forall m n (mNn: m != n), F n (Co m n))
+  (CoUnique : forall m n l (mNn: m != n), F m l -> F n l -> l = Co m n).
+
+  Lemma T_elem: T.
+  Proof.
+    clear -T_nonempty.
+    move: (@enum_default T [set: T] ).
+    move: T_nonempty; rewrite -card_gt0.
+    sauto.
+  Qed.
+  
+  Lemma Co_sym m n (mNn: m != n) (nNm: n != m): Co m n = Co n m.
   Proof.
     firstorder.
   Qed.
@@ -39,7 +54,7 @@ Section friendship_sec.
 
     Should the result be 'path F a [b, c, d, a]' ?
    *)
-  From mathcomp Require Import all_ssreflect.
+  
   Lemma noC4 (a b c d : T):
     uniq [:: a ; b; c; d] ->
     ~(path F a [:: b; c; d; a]).
@@ -90,28 +105,113 @@ Section friendship_sec.
     firstorder.
   Qed.
 
-  Definition adj_u_adj_v_f u v 
+
+  (*Definition map_adj (u v w: T) := Co v w.*)
+  
+  (*Definition map_adj' u v 
     (uNv: u != v) (nFuv: ~~(F u v)) w (wAdjU: w \in adj u) 
-    := (Co (v_not_in_adj_u  wAdjU nFuv)).
-
-  Check (adj_u_adj_v_f _).
-
-  Lemma adj_u_adj_v_f_to_adjv u v (uNv: u != v) 
+    := (Co (v_not_in_adj_u  wAdjU nFuv)).*)
+  
+  Lemma map_adj_im u v (*(uNv: u != v) *)
     (nFuv: ~~(F u v)) w (wAdjU: w \in adj u) :
-    adj_u_adj_v_f uNv nFuv  wAdjU \in adj v.
+    Co v w \in adj v.
   Proof.
-    rewrite /adj_u_adj_v_f in_set.
-    apply: Col.
+    rewrite in_set.
+    apply: Col; apply: (@v_not_in_adj_u u); by [].
   Qed.
 
-  (*Lemma adj_u_adj_v_f_injective :
-    TODO: extend the function so that it is total;
-    prove that it's injective {in adj u}
-   *)
+  Lemma Feq u v: F u v -> u != v.
+  Proof.
+    by case: (@eqP _ u v); [move => ->; rewrite Firr|].
+  Qed.
+  
+  Lemma map_adj_inj u v (uNv: u != v) (nFuv: ~~(F u v)):
+    {in adj u &, injective (Co v) }.
+  Proof.
+    move => w1 w2  w1adj w2adj coeq.
+    rewrite in_set in w1adj; rewrite in_set in w2adj.
+
+    have vw1 : v != w1. {
+      case: (@idP (v == w1)) => /eqP vw1.
+      by rewrite -vw1 in w1adj; move: nFuv => /negP; firstorder.
+      by firstorder.
+    }
+    have vw2 : v != w2. {
+      case: (@idP (v == w2)) => /eqP vw2.
+      by rewrite -vw2 in w2adj; move: nFuv => /negP; firstorder.
+      by firstorder.
+    }
+    set x := Co v w1.
+    have fxw1 := (Cor vw1). 
+    have fxw2 := (Cor vw2). 
+    rewrite -/x in fxw1.
+    rewrite -coeq -/x in fxw2.
+
+    have w1x: w1 != x by apply Feq.
+    have w2x: w2 != x by apply Feq.
+
+    have ux : u != x. {
+      case: (@eqP _ u x) => ux.
+      move: (Col vw1); rewrite -/x -ux Fsym.
+      by move: nFuv => /negP; clear; firstorder.
+      by [].
+    } 
+    
+    (*
+      u ... w1
+      .      .
+      .      .
+      w2 ... [v w1] = [v w2] = x 
+     *)
+
+    transitivity (Co u x). {
+      apply: CoUnique => //=.
+      rewrite Fsym //=.
+    } {
+      symmetry.
+      apply: CoUnique => //=.
+      rewrite Fsym //=.
+    }
+  Qed.
 
   
-  Lemma almost_homogeneous_leq u v:
+  Lemma almost_regular_leq u v:
     ~~(F u v) -> deg u <= deg v.
-  Admitted.
+  Proof.
+    case: (@eqP _ u v) => uv fuv; [by rewrite uv leqnn |].
+    move: uv => /eqP uv.
+    rewrite /deg -(card_in_imset (map_adj_inj uv fuv  ));
+      apply subset_leq_card.
+    
+    have ->: [set Co v x | x in adj u] \subset adj v. {
+      rewrite subsetE.
+      apply  /pred0P => x //=.
+      case: (@idP (x \notin adj v)) => //= xNotAdj.
+      apply/eqP; rewrite eqbF_neg; apply /negP.
+      move=> /imsetP [w wadj xeq].
+      have in_adj := (map_adj_im  fuv wadj).
+      rewrite -xeq in in_adj.
+      move: xNotAdj => /negP; firstorder.
+    }
+    by [].
+  Qed.
+
+  Lemma almost_regular_eq u v: ~~(F u v) -> deg u = deg v.
+  Proof.
+    move=> fuv.
+    have /eqP := almost_regular_leq fuv.
+    rewrite Fsym in fuv.
+    have /eqP := almost_regular_leq fuv.
+    ssrnat_lia.
+  Qed.
   
+  Section assume_contra.
+    Context (no_hub: forall u, {v | ~~(F u v)}).
+
+    Lemma regular u v: deg u = deg v.
+    Proof.
+      have [w fuw] := no_hub u.
+      (* TODO how was this step again? pen and paper *)
+    Admitted.
+  End assume_contra.
 End friendship_sec.
