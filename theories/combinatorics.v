@@ -2,6 +2,10 @@
 From mathcomp Require Import choice fintype finfun bigop finset.
 *)
 From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import ssralg  (*zmodp*) matrix (* mxalgebra poly (* polydiv *)
+  mxpoly *)       .
+From mathcomp Require Import bigop.
+
 
 From Hammer Require Import Tactics .
 From Hammer Require Import Hammer .
@@ -260,12 +264,75 @@ Section friendship_sec.
       rewrite card_gt0 -/t; apply/set0Pn; apply: ex_of_sig.
       have [y _ ty] := no_hub t.
       exists (Co t y).
-      rewrite inE.
+      rewrite finset.inE.
       apply (Col ty).
     Qed.
 
-    
+    Definition nn := #|[eta T]|.
+    Context (R: ringType).
+    Local Open Scope ring_scope.
+    Definition A : 'M[R]_nn :=
+      \matrix_(i < nn, j < nn) (F (enum_val i) (enum_val j))%:R.
 
+    Lemma A_diag i: A i i = 0.
+    Proof.
+      by rewrite !mxE Firr.
+    Qed.
+
+    Lemma A_tr : \tr A = 0.
+    Proof.
+      rewrite /mxtrace  (eq_bigr (fun=> 0)).
+      by rewrite big_const_ord  GRing.iter_addr GRing.addr0 GRing.mul0rn .
+      by move=> i _; rewrite A_diag.
+    Qed.
+
+    Lemma A2_diag i: (A*m A) i i = k%:R.
+    Proof.
+      
+      rewrite /mulmx !mxE (eq_bigr (fun j=> if (F (enum_val i) (enum_val j))
+                                            then 1
+                                            else 0)) -/nn.
+      rewrite (bigID (fun x=> F (enum_val i) (enum_val x))) //= -/nn.
+      rewrite [in X in X + _](eq_bigr (fun=> 1)).
+      rewrite [in X in _ + X](eq_bigr (fun=> 0)).
+      rewrite !GRing.sumr_const GRing.mul0rn GRing.addr0 //=.
+      apply: f_equal.
+      rewrite -(regular (enum_val i)) /deg /adj.
+      
+      rewrite -(@card_imset _ _ enum_val _ enum_val_inj) //=.
+      apply: f_equal; apply: f_equal; apply: f_equal.
+      apply/setP => x.
+
+      rewrite !inE.
+
+      case: (@idP (F (enum_val i) x)) => Fix ; apply/idP. {
+        apply /(@imsetP (ordinal_finType nn) T enum_val ).
+        exists (enum_rank x).
+        by rewrite /in_mem //= enum_rankK.
+        by rewrite enum_rankK.
+      } {
+        
+        move => /(@imsetP (ordinal_finType nn) T enum_val ) [j].
+        rewrite /in_mem //= => Fij xj.
+        rewrite xj in Fix.
+        firstorder.
+      }
+      by move => j /negPf ->.
+      by move => j -> . {
+        move=>  j _.
+        rewrite !mxE.
+        case: (@idP (F (enum_val i) (enum_val j))) => Fij. {
+          rewrite Fsym in Fij.
+          by rewrite GRing.mul1r  Fij.
+        }
+        by rewrite GRing.mul0r.
+      }
+    Qed.
+
+    (*
+    Lemma A2_off_diag i j:  i != j -> (A*m A) i i = k%:R.
+    Proof.
+     *)
       
   End assume_contra.
 End friendship_sec.
