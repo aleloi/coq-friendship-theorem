@@ -32,7 +32,15 @@ Section friendship_sec.
     move: T_nonempty; rewrite -card_gt0.
     sauto.
   Qed.
+
+  Definition n := #|[set: T]|.
+  Lemma nge1 : n >= 1.
+  Proof.
+    by move: T_nonempty; rewrite card_gt0.
+  Qed.
+
   
+
   Lemma Co_sym m n (mNn: m != n) (nNm: n != m): Co m n = Co n m.
   Proof.
     firstorder.
@@ -92,6 +100,7 @@ Section friendship_sec.
 
   Definition adj u := [set w | F u w].
   Definition deg u := #|adj u|.
+  Definition k := deg T_elem.
 
   Lemma v_not_in_adj_u u v w:
     w \in adj u -> ~~(F u v) -> v != w.
@@ -206,12 +215,57 @@ Section friendship_sec.
   Qed.
   
   Section assume_contra.
-    Context (no_hub: forall u, {v | ~~(F u v)}).
+    Context (no_hub: forall u, {v | ~~(F u v) & u != v}).
 
-    Lemma regular u v: deg u = deg v.
+    
+    Lemma almost_almost_regular x u:
+      T_elem != x -> ~~(F T_elem x) -> u != Co T_elem x -> deg u = k.
     Proof.
-      have [w fuw] := no_hub u.
-      (* TODO how was this step again? pen and paper *)
-    Admitted.
+      set t := T_elem.
+      set ctx := Co t x.
+      move=> tx Ftx uctx.
+      have degx := almost_regular_eq Ftx.
+      rewrite -/k in degx.
+      case: (@idP (F t u)); case: (@idP (F x u));
+        [move=> fxu ftu | move=>/negP f _ |
+          move=> _ /negP f  ..
+        ]; try rewrite -(almost_regular_eq f) //=. {
+        rewrite (CoUnique tx ftu fxu) in uctx.
+        move: uctx => /eqP; firstorder.
+      }
+    Qed.
+    
+    Lemma regular u: deg u = k.
+    Proof.
+      set t := T_elem.
+      have [x ftx tx] := no_hub t.
+
+      have almost_all: forall v, v != Co t x -> deg v = k by
+          move=> v; apply (almost_almost_regular tx ftx).
+      
+      case: (@idP (u != Co t x)); try apply (almost_almost_regular tx ftx  ).
+      move=> /negP /negPn /eqP uco.
+      rewrite -uco in almost_all.
+      have [y fuy uy] := no_hub u.
+      
+      rewrite (almost_regular_eq fuy) .
+      rewrite eq_sym in uy.
+      
+      exact (almost_all y uy).
+    Qed.
+    
+    Lemma kge1: k >= 1.
+    Proof.
+      set t := T_elem.
+      rewrite card_gt0 -/t; apply/set0Pn; apply: ex_of_sig.
+      have [y _ ty] := no_hub t.
+      exists (Co t y).
+      rewrite inE.
+      apply (Col ty).
+    Qed.
+
+    
+
+      
   End assume_contra.
 End friendship_sec.
