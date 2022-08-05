@@ -17,6 +17,36 @@ Unset Printing Implicit Defensive.
 
 Require Import Friendship.adj2_matrix.
 Require Import Friendship.divisibility.
+Require Import Friendship.matrix_casts.
+
+Section fintype_sig.
+  (* Can probably be simplified. Avoids 'case analysis on Type' when
+     trying to destruct / inversion / case an 'exists'
+     statement. Coudln't find anything equivalent in mathcomp.finset /
+     mathcomp.fintype / Coq.ssr.ssreflect.  *)
+  Lemma fintype_exists_to_sig (T: finType) (P: {pred T}): (exists v, P v) -> {v | P v}.
+  Proof.
+    clear => in_P'.
+    have in_P'' : exists v, v \in P by rewrite /mem /in_mem //=.
+    case: (set_0Vmem (finset P)); last first. {
+      move=> [v prop].
+      rewrite inE in prop.
+      by exists v.
+    } {
+      move=> p0.
+      have pc0 : #|finset P| = 0 by rewrite p0 cards0.
+      have pcp0 := (card0_eq pc0).
+      have pcp_ v:  ~~(P v). {
+        move: (pcp0 v); rewrite !inE.
+        move=> aoeu.
+        by apply/negPf.
+      }
+      move: pcp_ => /existsPn /negP noex.
+      exfalso. apply noex.
+      by move: in_P' => /existsP.
+    }
+  Qed.
+End fintype_sig.
 
 Section friendship_sec.
   
@@ -45,8 +75,6 @@ Section friendship_sec.
     by move: T_nonempty; rewrite card_gt0.
   Qed.
 
-  
-
   Lemma Co_sym m n (mNn: m != n) (nNm: n != m): Co m n = Co n m.
   Proof.
     firstorder.
@@ -60,50 +88,7 @@ Section friendship_sec.
   Proof.
     move=> /andP; firstorder.
   Qed.
-    
-  (* Tried with #|[set a; b; c; d]| = 4, but
-     didn't manage to rewrite with 'setUC cardsU1'.
-     Maybe try with 'uniq' ?
-     There is '[set x in lst]' and CardEq.
-
-    Should the result be 'path F a [b, c, d, a]' ?
-   *)
-  
-  Lemma noC4 (a b c d : T):
-    uniq [:: a ; b; c; d] ->
-    ~(path F a [:: b; c; d; a]).
-  Proof.
-    clear -Fsym CoUnique.
-    move=> card4.
-    rewrite uniq_pairwise in card4.
       
-    have bNc: b != d. {
-      move: card4.
-      rewrite pairwise_cons.
-      move=> /andWr.
-      rewrite pairwise_cons.
-      move=> /andWl /andWr /andP.
-      firstorder.
-    }
-     
-    have aNc: a != c. {
-      move: card4.
-      rewrite pairwise_cons.
-      by move => /andWl /andWr /andWl.
-    }
-
-    rewrite //= andbT;
-      move=> /andP [Fab /andP [Fbc /andP [Fcd Fda] ] ].
-    
-    have Fcb : F c b by rewrite Fsym.
-    have Fad : F a d by rewrite Fsym.
-    
-    have b_co_ac := CoUnique aNc Fab Fcb.
-    have d_co_ac := CoUnique aNc Fad Fcd.
-    rewrite b_co_ac d_co_ac in bNc.
-    move:  bNc => /eqP. firstorder.
-  Qed.
-
   Definition adj u := [set w | F u w].
   Definition deg u := #|adj u|.
   Definition k := deg T_elem.
@@ -221,8 +206,16 @@ Section friendship_sec.
   Qed.
   
   Section assume_contra.
-    Context (no_hub: forall u, {v | ~~(F u v) & u != v}).
+    Context (no_hub': forall u, [exists v, ~~(F u v) && (u != v)]).
 
+    (* sig version of no_hub'. This is usable, in contrast to no_hub'. *)
+    Lemma no_hub: forall u, {v | ~~(F u v) & (u != v)}.
+    Proof.
+      move=>u.
+      have /existsP nhu := (no_hub' u).
+      move: (fintype_exists_to_sig nhu) => [v /andP [p1 p2]].
+      by exists v.
+    Qed.
     
     Lemma almost_almost_regular x u:
       T_elem != x -> ~~(F T_elem x) -> u != Co T_elem x -> deg u = k.
@@ -687,12 +680,9 @@ Section friendship_sec.
 
     Lemma Asqrt : is_square_root k A'.
     Proof.
-      rewrite /is_square_root /adj2.
-    Admitted.
-    
-
-    (* Wow, k = 2! *)
-    (*Check (k_is_2 kge1 nge1 Asqrt A'_tr nk).*)
+      by rewrite /is_square_root /adj2  /A' -mulmx_castmx  adj2_eq
+          summx_castmx castmx_const scalar_mx_castmx.
+    Qed.
 
     Lemma k_not_2: k <> 2%N.
     Proof.
@@ -824,39 +814,39 @@ Section friendship_sec.
     Qed.
 
   End assume_contra.
-  (*Check fls.
-  Lemma exists_hub: { u : T | forall v : T, u != v -> F u v}.
+  (* Just rewriting 'fls', which is ~(forall u : T, [exists v, ~~ F u v && (u != v)]).*)
+  Lemma exists_hub: [exists x, forall v, (x != v) ==> F x v].
   Proof.
-    
-    (* reformulation of 'fls' in finite quantors *)
-    Check fls.
-    have fin_quant: ~~[forall u : T, exists v, ((~~F u v) && (u != v))]. {
-      (*
-        
-       *)
-      rewrite negb_forall.
+    have no_hub : ~~[forall u : T, exists v : T, ~~ F u v && (u != v)].  {
       apply/negP => /forallP.
-    
-    
-    apply /existsP.
-    
-    
-    have fin_quant: [exists u, [forall v, (u == v) || (F u v)] ]. {
-      case: (@idP [exists u, [forall v, (u == v) || (F u v)] ]) => //= /negP.
-      rewrite negb_exists.  => /forallP /(_ T_elem) /negP toF.
-      exfalso; apply fls.
 
-      Check fls.
-      
-      have -> (u == v) || (F u v)
-    Search reflect ex.
-    About forallPn.
-    
-    Lemma existsPP : reflect (exists x, PP x) [exists x, P x].
-Proof. by apply: (iffP pred0Pn) => -[x /viewP]; exists x. Qed.
+      set frl_exs := forall u : T, [exists v : T, ~~ F u v && (u != v)].
+      have not_fe :  ~frl_exs by exact fls.
+      by [].
+    }
+    rewrite  negb_forall in no_hub.
+    rewrite (@eq_existsb _ (fun x=> ~~ [exists v, ~~ F x v && (x != v)])
+                       (fun x=>  [forall v, (x != v) ==> F x v ])
+            ) in no_hub; last first. {
+      move=> u.
+      rewrite negb_exists .
+      rewrite (@eq_forallb _ (fun v=> ~~ (~~ F u v && (u != v)))
+                           (fun v=> (u != v) ==> F u v)); last first. {
+        move=> v.
+        by rewrite negb_and Bool.negb_involutive implybE Bool.orb_comm.
+      }
+      by [].
+    }
+    by [].
+  Qed.
 
-Lemma forallPP : reflect (forall x, PP x) [forall x, P x].
-Proof. by apply: (iffP pred0P) => /= allP x; have /viewP//=-> := allP x. Qed.
-   *)
+  Lemma exists_hub_sig: {u | forall v, (u != v) -> F u v}.
+  Proof.
+    move: exists_hub => /existsP /fintype_exists_to_sig [u /forallP prop].
+    exists u => v unv.
+    have propv := prop v.
+    by rewrite unv implyTb in propv.
+  Qed.
     
 End friendship_sec.
+

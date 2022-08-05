@@ -29,8 +29,7 @@ Section bigops.
     
    *)
   Local Open Scope set_scope.
-  Search GRing.natmul.
-  
+    
   Lemma big_bool [R: ringType] [S : Type]
            [I : seq S]  (a : pred S) (F : bool -> R):
     \sum_(i <- I) F (a i) =

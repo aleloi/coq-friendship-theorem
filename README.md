@@ -1,4 +1,46 @@
-My ambition is to prove the [Friendship Theorem](https://math.mit.edu/~apost/courses/18.204-2016/18.204_Elizabeth_Walker_final_paper.pdf) in Coq with the [Mathematical Components](https://math-comp.github.io/) library.
+This repository contains a proof of the [Friendship Theorem](https://math.mit.edu/~apost/courses/18.204-2016/18.204_Elizabeth_Walker_final_paper.pdf) in Coq with the [Mathematical Components](https://math-comp.github.io/) library.
+
+The formulation is currently
+``` {coq}
+Theorem FriendshipTheorem
+  (T: finType) (T_nonempty: [set: T] != set0)
+  (F (* friendship relation *): rel T) (Fsym: symmetric F) (Firr: irreflexive F)
+  (Co: T -> T -> T) (Col: forall u v : T, u != v -> F u (Co u v))
+  (Cor: forall u v : T, u != v -> F v (Co u v))
+  (CoUnique: forall u v w : T, u != v -> F u w -> F v w -> w = Co u v):
+  {u : T | forall v : T, u != v -> F u v}.
+```
+
+I followed the proof in the linked article, which in turn follows that
+in *Proofs from THE BOOK*. The theorem formulation is in
+[theories/friendship_theorem.v](theories/friendship_theorem.v). The
+proof is mainly split up between
+[theories/combinatorics.v](theories/combinatorics.v) for the graph
+theory and [theories/adj2_matrix.v](theories/adj2_matrix.v) for the
+linear algebra. The proof is roughly 2 parts combinatorics and graph
+theory, 1 part linear algebra, and 3 parts more or less general lemmas
+of matrices, characteristic polynomials and such.
+
+As far as I know, this is the 79th [formalized Coq theorem](https://madiot.fr/coq100/) of the ["top 100" mathematical theorems](http://www.cs.ru.nl/~freek/100/) .
+
+```
+$ wc theories/*v
+  401  2009 14280 theories/adj2_matrix.v
+   53   216  1383 theories/bigops.v
+  852  4093 26067 theories/combinatorics.v
+  237  1111  7391 theories/divisibility.v
+   24   154   740 theories/friendship_theorem.v
+   70   300  1967 theories/matrix_casts.v
+  132   644  4510 theories/matrix_lemmas.v
+  343  1499 11162 theories/square_char_poly.v
+ 2112 10026 67500 total
+```
+
+## Dependencies
+* coq-hammer-tactics for `sauto`.
+* coq-mathcomp-algebra
+* coq-mathcomp-field for the existance of an algebraically closed field `algC` with characteristic 0
+* coq-mathcomp-ssreflect
 
 
 ## TODOS 
@@ -22,13 +64,7 @@ My ambition is to prove the [Friendship Theorem](https://math.mit.edu/~apost/cou
 	* This [README](https://github.com/coq-community/manifesto/wiki/Recommended-Project-Structure) lists all guidelines in one place.
 
 * The proof:
-  * Type out the proof that `no_hub` and `k=2` implies `False`.
-  * Learn about finite set quantifiers and reflections to Prop
-    quantifiers; do the proof that `no_hub -> False` implies `hub`
-    (maybe it's easier to reformulate from `sig` types to `exists`?)
-  * Matrices: Maybe just redo/rewrite the proofs for `A *m A` and
-    change the matrix dims? Otherwise, I think it's enough that
-    `castmx A *m castmx A = castmx (A *m A)` and `castmx A + castmx B
-    = castmx (A + B)`. Maybe something about `cast_ord` being a
-    bijection, so the sums in the product don't change?
-  
+  * Reformulate the theorem a little so that Co doesn't have to be
+    total. I think start with `Co: (u != v) -> {w | F u w & F v w}`
+	or `forall u v, u != v -> #|set w | F u v && F v w| = 1`, and construct
+    a total `Co` that satisfies the theorem 

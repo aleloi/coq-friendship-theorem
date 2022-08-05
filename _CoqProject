@@ -7,3 +7,5 @@ theories/square_char_poly.v
 theories/bigops.v
 theories/divisibility.v
 theories/combinatorics.v
+theories/matrix_casts.v
+theories/friendship_theorem.v
