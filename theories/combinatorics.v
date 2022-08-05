@@ -6,6 +6,7 @@ From mathcomp Require Import ssralg  (*zmodp*) matrix (* mxalgebra poly (* polyd
   mxpoly *)       .
 From mathcomp Require Import bigop.
 
+From mathcomp Require Import algC.
 
 From Hammer Require Import Tactics .
 From Hammer Require Import Hammer .
@@ -15,6 +16,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Require Import Friendship.adj2_matrix.
+Require Import Friendship.divisibility.
 
 Section friendship_sec.
   
@@ -269,7 +271,8 @@ Section friendship_sec.
     Qed.
 
     Definition nn := #|[eta T]|.
-    Context (R: ringType).
+    Definition R := algC.
+    
     Local Open Scope ring_scope.
     Definition A : 'M[R]_nn :=
       \matrix_(i < nn, j < nn) (F (enum_val i) (enum_val j))%:R.
@@ -311,7 +314,6 @@ Section friendship_sec.
         by rewrite /in_mem //= enum_rankK.
         by rewrite enum_rankK.
       } {
-        
         move => /(@imsetP (ordinal_finType nn) T enum_val ) [j].
         rewrite /in_mem //= => Fij xj.
         rewrite xj in Fix.
@@ -329,10 +331,532 @@ Section friendship_sec.
       }
     Qed.
 
-    (*
-    Lemma A2_off_diag i j:  i != j -> (A*m A) i i = k%:R.
+
+    Definition adj' u := [set w | F u w && (w != T_elem)].
+    
+    Lemma adj'_disjoint (u1 u2 : T):
+      u1 \in adj T_elem -> u2 \in adj T_elem ->
+      u1 != u2 -> [disjoint (adj' u1) & (adj' u2)].
     Proof.
-     *)
+      rewrite /disjoint /adj !inE => u1adj u2adj u12.
+      apply/pred0P => x //=.
+      case: (@idP (x \in adj' u1)); case: (@idP (x \in adj' u2));
+        rewrite /adj' //= !inE => /andP [fu2x xt] /andP [fu1x _].
+      rewrite Fsym in fu2x.
+      rewrite Fsym in fu1x.
+      move: u12.
+      rewrite (CoUnique xt fu1x u1adj) (CoUnique xt fu2x u2adj).
+      by move => /eqP.
+    Qed.
+
+    Lemma adj'_and_tU u:
+      u \in adj T_elem -> (adj' u) :|: [set T_elem]  = adj u.
+    Proof.
+      rewrite inE -setP => fut x.
+      rewrite /adj /adj' !inE.
+      rewrite Fsym in fut.
+      case: (@idP (x == T_elem)).
+      by move=> /eqP ->; rewrite fut.
+      by rewrite Bool.andb_true_r Bool.orb_false_r.
+    Qed.
+
+    Lemma adj'_and_t_disj u:
+      u \in adj T_elem -> [disjoint (adj' u) & [set T_elem] ].
+    Proof.
+      rewrite /disjoint /adj' => uadj. 
+      apply/pred0P => x; rewrite !inE //=.
+      by case: (x == T_elem) => //=; rewrite Bool.andb_false_r ?Bool.andb_true_r .
+    Qed.
+
+    Lemma adj'_card u:
+      u \in adj T_elem -> #|adj' u| = (k-1)%N.
+    Proof.
+      set k' := #|adj' u|.
+      move=> uadj.
+      have: (k' + 1)%N = k. {
+        rewrite /k' -(cards1 T_elem) -(regular u) /deg -(adj'_and_tU uadj).
+
+        have aoue := (eq_leqif (leq_card_setU (adj' u) [set T_elem]) ).
+        rewrite (adj'_and_t_disj _) in aoue.
+        by move: aoue => /idP /eqP ->.
+        by [].
+      }
+      move: k kge1 => [|k''] //=.
+      ssrnat_lia.
+    Qed.
+    Definition adj_cover :=[set adj' u | u in adj T_elem].
+    Definition dist2 := cover adj_cover.
+
+    Lemma k_not_1 : k != 1%N.
+      (* Bevis: om k = 1, är adj T_elem = {a}.
+         Det finns x, x != T_elem med ~~F T_elem x.
+         x != a, för att F T_elem a och ~~F T_elem x.
+         Co x t är granne med t, alltså är det a.
+         Co x t har kant till x, alltså har a 2 kanter, vilket motsäger att
+           allt har 1 kant.
+       *)
+    Proof.
+      case: (@idP (k != 1%N)) => //= /negP.
+      rewrite Bool.negb_involutive => /eqP k1.
+      have adj1 u: #|adj u| == 1%N
+        by apply/eqP; rewrite -k1 -/(deg u)  (regular u).
+
+      (*Definition adj_ := forall v, cards1P (adj1 v).*)
+      move: (cards1P (adj1 T_elem)) => [a seta].
+      move: (no_hub T_elem) => [x ftx tx].
+      have aadj : a \in adj T_elem by rewrite seta set11.
+      have fta : F T_elem a by rewrite inE in aadj.
+
+      have xa : x != a. {
+        case: (@idP (x != a)) => //= /negP.
+        rewrite Bool.negb_involutive => /eqP xa.
+        rewrite xa in ftx.
+        by move: ftx  => /negP; rewrite fta.
+      }
+
+      set a' := Co x T_elem.
+      rewrite eq_sym in tx.
+      have coF := Cor tx.
+      have a'adj : a' \in adj T_elem
+          by rewrite inE /a'.
+      have a'a: a' = a by rewrite seta in a'adj; move: a'adj => /set1P.
       
+      have uea := Col tx.
+      rewrite -/a' a'a in uea.
+
+      have xadj : x \in adj a by rewrite inE Fsym.
+      have tadj : T_elem \in adj a by rewrite inE Fsym.
+
+      move: (cards1P (adj1 a)) => [z setz].
+      rewrite setz in xadj tadj.
+      move: xadj => /set1P xz.
+      move: tadj => /set1P tz.
+      rewrite -xz in tz.
+      move: tx => /eqP tx.
+      symmetry in tz.
+      by move: (tx tz).
+    Qed.
+
+    Lemma card_cover:  #|adj_cover| = k.
+    Proof.
+      rewrite /adj_cover card_in_imset. {
+        by []. } {
+        move => w1 w2  w1adj w2adj coeq.
+        have disjF := adj'_disjoint w1adj w2adj.
+        case: (@idP (w1 == w2)) => //=. by move=> /eqP. {
+          move=> /negP /disjF /setDidPl.
+          rewrite coeq setDv => w20.
+          have : #|adj' w2| = 0%N
+            by rewrite -w20 cards0.
+          
+          rewrite (adj'_card w2adj).
+
+          move=> k_eq.
+          have k1 : k = 1%N
+            by move: k  kge1 k_eq => [| k'] //=; ssrnat_lia.
+          move: k_not_1; rewrite k1.
+          move =>  /eqP; clear; firstorder.
+        }
+      }
+    Qed.
+
+
+    Lemma disjoint_cover : trivIset adj_cover.
+    Proof.
+      apply/trivIsetP => A B /imsetP [u ut] -> /imsetP [v vt] -> sets_diff.
+      case: (@idP (u != v)).
+      by move=> uv; exact (adj'_disjoint ut vt uv). {
+        move => /idP /eqP uv.
+        rewrite uv in sets_diff.
+        move: sets_diff; rewrite eq_refl //=.
+      }
+    Qed.
+
+    Lemma dist2_card : #|dist2| = (k*(k-1))%N.
+    Proof.
+      have := (eq_leqif (leq_card_cover adj_cover) ).
+      rewrite disjoint_cover /dist2; move=> /eqP -> .
+      rewrite (eq_bigr (fun=> (k-1)%N)). {
+        rewrite big_const iter_addn_0 [in RHS]mulnC.
+        apply: f_equal.
+        exact card_cover.
+      }
+      move=> A /imsetP [v vt] ->.
+      by apply: adj'_card.
+    Qed.
+
+    Lemma adjT_subs_cover: adj T_elem \subset dist2.
+    Proof.
+      rewrite subsetE.
+      apply/pred0P => x; rewrite !inE //=.
+      apply: negPf.
+      apply /negP => /andP [ xd ftx].
+      set y := Co T_elem x.
+      have xt : T_elem != x. {
+        case: (@idP (T_elem != x)) => //= /negP /negPn /eqP tx.
+        by rewrite tx Firr in ftx.
+      }
+      have ty := Col xt.
+      have xy := Cor xt.
+      rewrite -/y in ty xy.
+      have xadjy : x \in adj' y. { 
+        rewrite inE.
+        rewrite eq_sym in xt.
+        by rewrite xt Bool.andb_true_r Fsym.
+      }
+      rewrite /dist2 /cover in xd.
+      move: xd => /bigcupP notin.
+      apply: notin => //=.
+      exists (adj' y).
+      rewrite /adj_cover.
+      apply /imsetP.
+      exists y.
+      rewrite inE.
+      by [].
+      by [].
+      by [].
+    Qed.
+
+    Lemma adjT_cover_noT: [disjoint dist2 & [set T_elem]].
+    Proof.
+      rewrite disjoint_sym /dist2 /cover.
+      apply /bigcup_disjointP => A /imsetP[u ut] ->.
+      rewrite disjoint_sym.
+      exact (adj'_and_t_disj ut).
+    Qed.
+
+    Lemma all_covered : [set: T] =  dist2 :|: [set T_elem].
+    Proof.
+      apply/setP => x //=.
+      rewrite inE.
+      symmetry.
+      apply/idP.
+      case: (@idP (T_elem == x)). {
+        by move=> /eqP <-; rewrite set1Ur. } {
+        move=> /negP tx.
+        set y := Co T_elem x.
+        have xy : x \in adj' y. {
+          rewrite inE.
+          have yx := Col tx.
+          have yt := Cor tx.
+          by rewrite Fsym yt Bool.andb_true_l eq_sym.
+        }
+        
+        apply/setUP; left.
+        rewrite /dist2 /cover.
+        apply /bigcupP.
+        exists (adj' y).
+        rewrite /adj_cover.
+        apply /imsetP.
+        exists y. 
+        by rewrite inE (Col tx).
+        by [].
+        by [].
+      }
+    Qed.
+
+    Lemma T_size: n = ((k*(k-1))%N + 1)%N.
+    Proof.
+      rewrite /n -dist2_card  -(cards1 T_elem).
+      have full_card := (eq_leqif (leq_card_setU dist2 [set T_elem]) ).
+      rewrite adjT_cover_noT  in full_card.
+      move: full_card => /idP /eqP <-.
+      by rewrite all_covered.
+    Qed.
+
+    Lemma nk: n = (k*k - k + 1)%N.
+      rewrite T_size.
+      move: k kge1 => [| k'] //=.
+      by ssrnat_lia.
+    Qed.
+
+    Lemma A2_off_diag i j:  i != j -> (A*m A) i j = 1%:R.
+    Proof.
+      move=> ij.
+      rewrite /mulmx !mxE /A //=
+        (eq_bigr (fun α=> if (F (enum_val i) (enum_val α)) &&
+                               (F (enum_val α) (enum_val j))
+                          then 1
+                          else 0)) -/nn. 
+
+      rewrite (bigID (fun α=> (F (enum_val i) (enum_val α)) &&
+                                (F (enum_val α) (enum_val j)))) //= -/nn.
+      rewrite [in X in X + _](eq_bigr (fun=> 1)).
+      rewrite [in X in _ + X](eq_bigr (fun=> 0)).
+      rewrite !GRing.sumr_const GRing.mul0rn GRing.addr0 //=.
+      set x := enum_val i.
+      set y := enum_val j.
+      set z := Co (enum_val i) (enum_val j).
+      have xy: x != y. {
+        case: (@idP (x != y)) => //= /negP.
+        rewrite Bool.negb_involutive => /eqP xy.
+        rewrite (enum_val_inj xy) in ij.
+        move: ij => /eqP; firstorder.
+      }
+      rewrite -(cards1 z).
+      rewrite -(@card_imset _ _ enum_val _ enum_val_inj) //=.
+      apply/f_equal /f_equal /f_equal /f_equal.
+      apply/setP => t.
+      rewrite !inE //=.
+      have Fxz := Col xy.
+      have Fyz := Cor xy.
+      rewrite -/z in Fxz Fyz.
+      rewrite Fsym in Fyz.
+      
+      case: (@idP (t == z)) => tz ; apply/idP. {
+        apply /(@imsetP (ordinal_finType nn) T enum_val ).
+        exists (enum_rank z).
+        by rewrite /in_mem //= enum_rankK Fxz Fyz.
+        by move: tz => /eqP ->; rewrite enum_rankK.
+      } {
+        
+        move => /(@imsetP (ordinal_finType nn) T enum_val ) [jj].
+        rewrite /in_mem //= => /andP [fxjj fjjy] tjj.
+        rewrite Fsym in fjjy.
+        have z_uniq := CoUnique xy fxjj fjjy.
+        rewrite -tjj in z_uniq.
+        rewrite z_uniq /z -/x -/y in tz.
+        apply tz.
+        by apply eq_refl.
+      }
+      by move => jj /negPf ->.
+      by move => jj -> . {
+        move=>  jj _.
+        rewrite !mxE.
+        case: (@idP (F (enum_val i) (enum_val jj)  && (F (enum_val jj) (enum_val j))))
+            => fijj . {
+          move: fijj => /andP [fijj fjji].
+          rewrite fijj.
+          rewrite fjji .
+          by rewrite GRing.mul1r .
+        }
+        move: fijj  => /negP.
+        rewrite negb_and => /orP some0.
+        by case: some0 => /negPf ->; rewrite ?GRing.mul0r ?GRing.mulr0.
+      }
+    Qed.
+
+    Lemma adj2_eq : A*m A = (const_mx 1) +
+                              (k-1)%:R%:M.
+    Proof.
+      apply/matrixP => i j; 
+      case: (@eqP _ i j). {
+        move=> ->.
+        rewrite A2_diag !mxE .
+        rewrite eq_refl GRing.mulr1n.
+        move: k kge1 => [|k'] //= _.
+        have -> : (k'.+1-1)%N = k' by ssrnat_lia.
+        have -> : k'.+1 = (1+k')%N by ssrnat_lia.
+        by rewrite GRing.natrD.
+      } {
+        move=> /eqP ij.
+        rewrite A2_off_diag //= !mxE.
+        by rewrite (introFn idP ij) GRing.mulr0n GRing.addr0.
+      }
+    Qed.
+
+    Lemma n_eq: nn = n.
+    Proof.
+      rewrite /nn /n.
+      by rewrite cardsE.
+    Qed.
+      
+    Lemma cast_eq:  nn = (1+(n-1))%N.
+    Proof.
+      rewrite n_eq.
+      by move: n nge1 => [| n'] //=; ssrnat_lia.
+    Qed.
+
+    Definition A' := (castmx (cast_eq, cast_eq) A).
+
+    (* Can't I use the previously proven version ?! *)
+    Lemma A'_tr : \tr A' = 0.
+    Proof.
+      rewrite /mxtrace /A' .
+      rewrite (eq_bigr
+                 (fun i =>
+                    A (cast_ord (esym cast_eq) i)
+                      (cast_ord (esym cast_eq) i))); last first. {
+        by move=> i _; rewrite castmxE.
+      } {
+        rewrite /mxtrace  (eq_bigr (fun=> 0)).
+        by rewrite big_const_ord  GRing.iter_addr GRing.addr0 GRing.mul0rn .
+        by move=> i _; rewrite A_diag.
+      }
+    Qed.
+
+    Lemma Asqrt : is_square_root k A'.
+    Proof.
+      rewrite /is_square_root /adj2.
+    Admitted.
+    
+
+    (* Wow, k = 2! *)
+    (*Check (k_is_2 kge1 nge1 Asqrt A'_tr nk).*)
+
+    Lemma k_not_2: k <> 2%N.
+    Proof.
+      set t := T_elem.
+      (*
+        The proof:
+        If k = 2, |adj t| = 2.
+        |adj t| is not empty, so there exists a ∈ adj t
+        some lemma should give [set a] \subset adj t and
+        adj t = (adj t ⧵ [set a]) ⊎ [set a] as a disjoint union.
+        By disjointness and 'card', |adj t ⧵ [set a]| = 1.
+        Thus |adj t ⧵ [set a]| = [set b].
+        a ∉ (adj t ⧵ [set a]), therefore a ∉ [set b], therfore a ≠ b.
+        Then adj t = [set b] ⊎ [set a] with a != b, so adj t = [set a, b].
+        --
+        We have F t a and F t b, since both are in adj t.
+        It follows that a != t and b != t (we already had a != b).
+        There is x ∉ adj t with x ≠ t by the 'no_hub' property.
+        We have x≠a, x≠b, because otherwise we would have (e.g.) both
+            F t a and ~~F t a.
+        Therefore all a, b, t, x are different, I think we can prove
+           uniq [a, b, c, d]
+        A lemma implies #|[set a, b, c, d]| = 4.
+        But by some lemma #|A : {set T}| <= #|T| = 3, so 4 <= 3.
+        Contradiction!
+       *)
+      
+      move=> k2.
+      have n3 : n=3%N by rewrite nk k2; ssrnat_lia.
+      have adj1 u: #|adj u| = 2%N (* Every |adj u| is 2. *)
+        by apply/eqP; rewrite -{}k2 -/(deg u)  (regular u).
+      clear Co Col Cor CoUnique.
+      have : 0%N < #|adj t| by rewrite adj1.
+      move=> /card_gt0P [a a_adj]. (* there is an 'a' in adj t *)
+      have a_sub : [set a] \subset adj t by rewrite sub1set.
+
+      (* adj t = (adj t ⧵ [set a]) ⊎ [set a] as a disjoint union. *)
+      have adjU := setD1K a_adj.
+      have adjD : [disjoint [set a] & (adj t :\ a)]
+        by rewrite  disjoints1; apply/negPf; rewrite setD11.
+
+      (* By disjointness and 'card', |adj t ⧵ [set a]| = 1. *)
+      set cta := #|adj t :\ a|.
+      have cta12 : (1 + cta)%N = 2%N. {
+        rewrite -[in LHS](cards1 a) /cta.
+        have full_card := (eq_leqif (leq_card_setU [set a] (adj t :\ a) ) ).
+        rewrite adjD in full_card.
+        move: full_card => /idP  /eqP /esym ->.
+        by rewrite adjU adj1.
+      }
+      have cta1 : cta == 1%N by apply/eqP; move: cta12; ssrnat_lia.
+
+      (* Thus |adj t ⧵ [set a]| = [set b]. *)
+      move: (cards1P cta1) => [b setb].
+      
+      (* a ∉ (adj t ⧵ [set a]), therefore a ∉ [set b], therfore a ≠ b. *)
+      have aNb: a \notin [set b] by rewrite -disjoints1 -setb.
+      rewrite in_set1 in aNb.
+
+      (* Then adj t = [set b] ⊎ [set a] with a != b, so adj t = [set a, b]. *)
+      have tab : adj t = [set a; b] by rewrite -adjU setb.
+
+      (* We have F t a and F t b, since both are in adj t.*)
+      have badj: b \in adj t by rewrite tab set22.
+      have fta : F t a by rewrite inE in a_adj.
+      have ftb : F t b by rewrite inE in badj.
+
+      have Fneq u v: F u v -> u != v. {
+        case: (@idP (u != v)) => //= /negP.
+        by rewrite Bool.negb_involutive => /eqP ->; rewrite Firr.
+      }
+      (* It follows that a != t and b != t (we already had a != b). *)
+      have a_t: a != t by rewrite eq_sym (Fneq _ _ fta).
+      have b_t: b != t by rewrite eq_sym (Fneq _ _ ftb).
+
+      (* There is x ∉ adj t with x ≠ t by the 'no_hub' property. *)
+      move: (no_hub t) => [x ftx tx].
+
+      (* We have x≠a, x≠b, because otherwise we would have (for a) both
+         F t a and ~~F t a.*)
+      have xa: x != a. {
+        case: (@idP (x != a)) => //= /negP.
+        rewrite Bool.negb_involutive => /eqP xa.
+        rewrite xa in ftx .
+        by move: ftx => /negP; rewrite fta.
+      }
+      have xb: x != b. {
+        case: (@idP (x != b)) => //= /negP.
+        rewrite Bool.negb_involutive => /eqP xb.
+        rewrite xb in ftx .
+        by move: ftx => /negP; rewrite ftb.
+      }
+
+      (* a, b, x, t are unique with 'uniq' *)
+      have abxt: uniq [:: a ; b; x; t]. {
+        rewrite uniq_pairwise pairwise_cons; apply/andP; split. {
+          rewrite //= aNb a_t.
+          rewrite eq_sym in xa.
+          by rewrite xa.
+        } {
+          rewrite pairwise_cons; apply/andP; split. {
+            rewrite //= b_t.
+            rewrite eq_sym in xb.
+            by rewrite xb.
+          }
+          rewrite pairwise_cons; apply/andP; split. {
+            by rewrite //= eq_sym tx.
+          } by [].
+        }
+      }
+
+
+      (*  A lemma implies #|[set a, b, c, d]| = 4. *)
+      have szabxt := (card_uniqP  abxt).
+      have sz4: size [:: a; b; x; t] = 4%N by [].
+      rewrite sz4 in szabxt.
+
+      (* but #|[set a, b, c, d]|  is also <= #|T| = 3 
+         But by lemma 'max_card' #|A : {set T}| <= #|T| = 3, so 4 <= 3.*)
+      have le43: #|[:: a; b; x; t]|  <= 3 by rewrite -n3 /n cardsT max_card.
+
+      (* Contradiction! *)
+      by rewrite szabxt in le43.
+    Qed.
+
+    
+    Lemma fls: False.
+    Proof. exact (k_not_2 (k_is_2 kge1 nge1 Asqrt A'_tr nk)).
+    Qed.
+
   End assume_contra.
+  (*Check fls.
+  Lemma exists_hub: { u : T | forall v : T, u != v -> F u v}.
+  Proof.
+    
+    (* reformulation of 'fls' in finite quantors *)
+    Check fls.
+    have fin_quant: ~~[forall u : T, exists v, ((~~F u v) && (u != v))]. {
+      (*
+        
+       *)
+      rewrite negb_forall.
+      apply/negP => /forallP.
+    
+    
+    apply /existsP.
+    
+    
+    have fin_quant: [exists u, [forall v, (u == v) || (F u v)] ]. {
+      case: (@idP [exists u, [forall v, (u == v) || (F u v)] ]) => //= /negP.
+      rewrite negb_exists.  => /forallP /(_ T_elem) /negP toF.
+      exfalso; apply fls.
+
+      Check fls.
+      
+      have -> (u == v) || (F u v)
+    Search reflect ex.
+    About forallPn.
+    
+    Lemma existsPP : reflect (exists x, PP x) [exists x, P x].
+Proof. by apply: (iffP pred0Pn) => -[x /viewP]; exists x. Qed.
+
+Lemma forallPP : reflect (forall x, PP x) [forall x, P x].
+Proof. by apply: (iffP pred0P) => /= allP x; have /viewP//=-> := allP x. Qed.
+   *)
+    
 End friendship_sec.
