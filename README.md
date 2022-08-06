@@ -1,13 +1,13 @@
 This repository contains a proof of the [Friendship Theorem](https://math.mit.edu/~apost/courses/18.204-2016/18.204_Elizabeth_Walker_final_paper.pdf) in Coq with the [Mathematical Components](https://math-comp.github.io/) library.
 
 The formulation is currently
-``` {coq}
-Theorem FriendshipTheorem
+``` coq
+Theorem Friendship
   (T: finType) (T_nonempty: [set: T] != set0)
-  (F (* friendship relation *): rel T) (Fsym: symmetric F) (Firr: irreflexive F)
-  (Co: T -> T -> T) (Col: forall u v : T, u != v -> F u (Co u v))
-  (Cor: forall u v : T, u != v -> F v (Co u v))
-  (CoUnique: forall u v w : T, u != v -> F u w -> F v w -> w = Co u v):
+  (F (* friendship relation *): rel T) (Fsym: symmetric F) (Firr: irreflexive F) :
+
+  (* u!= v have exactly 1 common friend *)
+  (forall (u v: T), u != v -> #|[set w | F u w & F v w]| == 1) ->
   {u : T | forall v : T, u != v -> F u v}.
 ```
 
