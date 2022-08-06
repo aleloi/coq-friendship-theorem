@@ -2,11 +2,16 @@ This repository contains a proof of the [Friendship Theorem](https://math.mit.ed
 
 The formulation is currently
 ``` coq
+(* 
+	T is a finite nonempty set of people some of which are friends. 
+	No one is friends with themselves (irreflexivity), and if x is 
+	friends with y, then y is friends with x (symmetry). If every 
+	pair of people have exactly one common friend, there exists one
+	persion that is friends with everyone else.
+*)
 Theorem Friendship
   (T: finType) (T_nonempty: [set: T] != set0)
-  (F (* friendship relation *): rel T) (Fsym: symmetric F) (Firr: irreflexive F) :
-
-  (* u!= v have exactly 1 common friend *)
+  (F : rel T) (Fsym: symmetric F) (Firr: irreflexive F) :
   (forall (u v: T), u != v -> #|[set w | F u w & F v w]| == 1) ->
   {u : T | forall v : T, u != v -> F u v}.
 ```
