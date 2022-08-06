@@ -32,14 +32,8 @@ Section friendship_sec.
   (Cor : forall m n (mNn: m != n), F n (Co m n))
   (CoUnique : forall m n l (mNn: m != n), F m l -> F n l -> l = Co m n).
 
-  Lemma T_elem: T.
-  Proof.
-    clear -T_nonempty.
-    move: (@enum_default T [set: T] ).
-    move: T_nonempty; rewrite -card_gt0.
-    sauto.
-  Qed.
-
+  Definition T_elem:  T := (xchoose (set0Pn _ T_nonempty)).
+  
   Definition n := #|[set: T]|.
   Lemma nge1 : n >= 1.
   Proof.

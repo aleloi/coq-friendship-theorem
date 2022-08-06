@@ -63,8 +63,3 @@ $ wc theories/*v
 	* This [SO post](https://stackoverflow.com/questions/53822753/coqide-error-with-exporting-modules-in-the-same-library) about importing 
 	* This [README](https://github.com/coq-community/manifesto/wiki/Recommended-Project-Structure) lists all guidelines in one place.
 
-* The proof:
-  * Reformulate the theorem a little so that Co doesn't have to be
-    total. I think start with `Co: (u != v) -> {w | F u w & F v w}`
-	or `forall u v, u != v -> #|set w | F u v && F v w| = 1`, and construct
-    a total `Co` that satisfies the theorem 

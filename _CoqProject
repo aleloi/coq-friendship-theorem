@@ -8,4 +8,5 @@ theories/bigops.v
 theories/divisibility.v
 theories/combinatorics.v
 theories/matrix_casts.v
+theories/statement_reduction.v
 theories/friendship_theorem.v
