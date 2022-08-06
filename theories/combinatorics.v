@@ -19,35 +19,6 @@ Require Import Friendship.adj2_matrix.
 Require Import Friendship.divisibility.
 Require Import Friendship.matrix_casts.
 
-Section fintype_sig.
-  (* Can probably be simplified. Avoids 'case analysis on Type' when
-     trying to destruct / inversion / case an 'exists'
-     statement. Coudln't find anything equivalent in mathcomp.finset /
-     mathcomp.fintype / Coq.ssr.ssreflect.  *)
-  Lemma fintype_exists_to_sig (T: finType) (P: {pred T}): (exists v, P v) -> {v | P v}.
-  Proof.
-    clear => in_P'.
-    have in_P'' : exists v, v \in P by rewrite /mem /in_mem //=.
-    case: (set_0Vmem (finset P)); last first. {
-      move=> [v prop].
-      rewrite inE in prop.
-      by exists v.
-    } {
-      move=> p0.
-      have pc0 : #|finset P| = 0 by rewrite p0 cards0.
-      have pcp0 := (card0_eq pc0).
-      have pcp_ v:  ~~(P v). {
-        move: (pcp0 v); rewrite !inE.
-        move=> aoeu.
-        by apply/negPf.
-      }
-      move: pcp_ => /existsPn /negP noex.
-      exfalso. apply noex.
-      by move: in_P' => /existsP.
-    }
-  Qed.
-End fintype_sig.
-
 Section friendship_sec.
   
   Context (T: finType) (T_nonempty :  [set: T] != set0)
@@ -213,7 +184,7 @@ Section friendship_sec.
     Proof.
       move=>u.
       have /existsP nhu := (no_hub' u).
-      move: (fintype_exists_to_sig nhu) => [v /andP [p1 p2]].
+      move: (sigW nhu) => [v /andP [p1 p2]].
       by exists v.
     Qed.
     
@@ -665,17 +636,9 @@ Section friendship_sec.
     (* Can't I use the previously proven version ?! *)
     Lemma A'_tr : \tr A' = 0.
     Proof.
-      rewrite /mxtrace /A' .
-      rewrite (eq_bigr
-                 (fun i =>
-                    A (cast_ord (esym cast_eq) i)
-                      (cast_ord (esym cast_eq) i))); last first. {
-        by move=> i _; rewrite castmxE.
-      } {
-        rewrite /mxtrace  (eq_bigr (fun=> 0)).
-        by rewrite big_const_ord  GRing.iter_addr GRing.addr0 GRing.mul0rn .
-        by move=> i _; rewrite A_diag.
-      }
+      rewrite tr_castmx /mxtrace (eq_bigr (fun => 0)).
+      by rewrite big_const_ord  GRing.iter_addr GRing.addr0 GRing.mul0rn .
+      by move=> i _; rewrite A_diag.
     Qed.
 
     Lemma Asqrt : is_square_root k A'.
@@ -842,11 +805,10 @@ Section friendship_sec.
 
   Lemma exists_hub_sig: {u | forall v, (u != v) -> F u v}.
   Proof.
-    move: exists_hub => /existsP /fintype_exists_to_sig [u /forallP prop].
+    move: exists_hub => /existsP /sigW [u /forallP prop].
     exists u => v unv.
     have propv := prop v.
     by rewrite unv implyTb in propv.
   Qed.
     
 End friendship_sec.
-

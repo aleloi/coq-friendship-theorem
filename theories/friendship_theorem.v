@@ -9,7 +9,7 @@ Require Import Friendship.combinatorics.
 (*
 Left: try change 'Co' from a total function to e.g.
   Co: (u != v) -> {w | F u w & F v w} *)
-Theorem FriendshipTheorem
+Theorem Friendship
   (T: finType) (T_nonempty: [set: T] != set0)
   (F (* friendship relation *): rel T) (Fsym: symmetric F) (Firr: irreflexive F)
   (Co: T -> T -> T) (Col: forall u v : T, u != v -> F u (Co u v))
@@ -22,3 +22,5 @@ Proof.
   exact Cor.
   exact CoUnique.
 Qed.
+
+  
