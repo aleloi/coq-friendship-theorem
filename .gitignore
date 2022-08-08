@@ -10,4 +10,3 @@ CoqMakefile.conf
 .Makefile.coq.d
 Makefile.coq.conf
 CoqMakefile
-*.html

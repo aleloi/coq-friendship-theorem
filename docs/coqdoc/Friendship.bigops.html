@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<link href="coqdocjs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="config.js"></script>
+<script type="text/javascript" src="coqdocjs.js"></script>
+</head>
+
+<body onload="document.getElementById('content').focus()">
+  <div id="header">
+    <span class="left">
+      <span class="modulename"> <script> document.write(document.title) </script> </span>
+    </span>
+
+    <span class="button" id="toggle-proofs"></span>
+
+    <span class="right">
+      <a href="./">Project Page</a>
+      <a href="./indexpage.html">Index</a>
+      <a href="./toc.html">Table of Contents</a>
+    </span>
+</div>
+    <div id="content" tabindex="-1" onblur="document.getElementById('content').focus()">
+    <div id="main">
+<h1 class="libtitle">Friendship.bigops</h1>
+
+<div class="code">
+<span class="id" title="keyword">From</span> <span class="id" title="var">mathcomp</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">ssreflect</span> <span class="id" title="library">ssrfun</span> <span class="id" title="library">ssrbool</span> <span class="id" title="library">eqtype</span> <span class="id" title="library">ssrnat</span> <span class="id" title="library">ssrint</span>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">mathcomp</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">fintype</span> <span class="comment">(*tuple&nbsp;*)</span> <span class="id" title="library">finfun</span> <span class="id" title="library">bigop</span>  <span class="comment">(*fingroup&nbsp;perm*)</span>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">mathcomp</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">ssralg</span> <span class="comment">(*zmodp&nbsp;matrix&nbsp;mxalgebra&nbsp;poly&nbsp;<span class="comment">(*&nbsp;polydiv&nbsp;*)</span><br/>
+&nbsp;&nbsp;mxpoly.&nbsp;*)</span>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">mathcomp</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">finset</span>.<br/>
+
+<br/>
+<span class="comment">(*From&nbsp;mathcomp&nbsp;Require&nbsp;Import&nbsp;algC.*)</span><br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.micromega.Lia.html#"><span class="id" title="library">Lia</span></a>.<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">Hammer</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">Tactics</span> .<br/>
+
+<br/>
+<span class="comment">(*Require&nbsp;Import&nbsp;Friendship.adj2_matrix.*)</span><br/>
+
+<br/>
+<span class="id" title="keyword">Set Implicit Arguments</span>.<br/>
+<span class="id" title="keyword">Unset</span> <span class="id" title="keyword">Strict</span> <span class="id" title="keyword">Implicit</span>.<br/>
+<span class="id" title="keyword">Unset</span> <span class="id" title="keyword">Printing</span> <span class="id" title="keyword">Implicit</span> <span class="id" title="var">Defensive</span>.<br/>
+
+<br/>
+<span class="comment">(*Import&nbsp;GroupScope.*)</span><br/>
+<span class="id" title="keyword">Import</span> <span class="id" title="module">GRing.Theory</span>.<br/>
+<span class="id" title="keyword">Local Open</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">ring_scope</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">From</span> <span class="id" title="var">mathcomp</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">tuple</span> <span class="id" title="library">seq</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Section</span> <a id="bigops" class="idref" href="#bigops"><span class="id" title="section">bigops</span></a>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="comment">(*<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;Lära&nbsp;mig&nbsp;finset&nbsp;?<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;Predikat&nbsp;för&nbsp;positiv&nbsp;och&nbsp;negativ&nbsp;rot.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;Vill&nbsp;visa&nbsp;att&nbsp;SUMMAN&nbsp;av&nbsp;alla&nbsp;rötter<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Local Open</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">set_scope</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <a id="big_bool" class="idref" href="#big_bool"><span class="id" title="lemma">big_bool</span></a> [<a id="R:1" class="idref" href="#R:1"><span class="id" title="binder">R</span></a>: <span class="id" title="abbreviation">ringType</span>] [<a id="S:2" class="idref" href="#S:2"><span class="id" title="binder">S</span></a> : <span class="id" title="keyword">Type</span>]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<a id="I:3" class="idref" href="#I:3"><span class="id" title="binder">I</span></a> : <span class="id" title="abbreviation">seq</span> <a class="idref" href="Friendship.bigops.html#S:2"><span class="id" title="variable">S</span></a>]  (<a id="a:4" class="idref" href="#a:4"><span class="id" title="binder">a</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.ssr.ssrbool.html#pred"><span class="id" title="definition">pred</span></a> <a class="idref" href="Friendship.bigops.html#S:2"><span class="id" title="variable">S</span></a>) (<a id="F:5" class="idref" href="#F:5"><span class="id" title="binder">F</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Logic.html#::type_scope:x_'-&gt;'_x"><span class="id" title="notation">-&gt;</span></a> <a class="idref" href="Friendship.bigops.html#R:1"><span class="id" title="variable">R</span></a>):<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="notation">\</span><span class="id" title="notation">sum_</span><span class="id" title="notation">(</span><a id="i:8" class="idref" href="#i:8"><span class="id" title="binder">i</span></a> <span class="id" title="notation">&lt;-</span> <a class="idref" href="Friendship.bigops.html#I:3"><span class="id" title="variable">I</span></a><span class="id" title="notation">)</span> <a class="idref" href="Friendship.bigops.html#F:5"><span class="id" title="variable">F</span></a> (<a class="idref" href="Friendship.bigops.html#a:4"><span class="id" title="variable">a</span></a> <a class="idref" href="Friendship.bigops.html#i:6"><span class="id" title="variable">i</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="notation">(</span><span class="id" title="notation">(</span><a class="idref" href="Friendship.bigops.html#F:5"><span class="id" title="variable">F</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a><span class="id" title="notation">)</span> <span class="id" title="notation">*+</span> <span class="id" title="notation">(</span><span class="id" title="definition">count</span> <a class="idref" href="Friendship.bigops.html#a:4"><span class="id" title="variable">a</span></a> <a class="idref" href="Friendship.bigops.html#I:3"><span class="id" title="variable">I</span></a><span class="id" title="notation">)</span><span class="id" title="notation">)</span> <span class="id" title="notation">+</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="notation">(</span><span class="id" title="notation">(</span><a class="idref" href="Friendship.bigops.html#F:5"><span class="id" title="variable">F</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a><span class="id" title="notation">)</span> <span class="id" title="notation">*+</span> <span class="id" title="notation">(</span><span class="id" title="definition">count</span> (<a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Datatypes.html#negb"><span class="id" title="definition">negb</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.ssr.ssrfun.html#8b4742e3f67816503ce4ab2f3b81c27e"><span class="id" title="notation">\</span></a><a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.ssr.ssrfun.html#8b4742e3f67816503ce4ab2f3b81c27e"><span class="id" title="notation">o</span></a> <a class="idref" href="Friendship.bigops.html#a:4"><span class="id" title="variable">a</span></a>) <a class="idref" href="Friendship.bigops.html#I:3"><span class="id" title="variable">I</span></a><span class="id" title="notation">)</span><span class="id" title="notation">)</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">elim</span>: <span class="id" title="var">I</span> =&gt; [| <span class="id" title="var">x</span> <span class="id" title="var">I</span> <span class="id" title="var">indH</span>]. {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">big_nil</span> //=; <span class="id" title="var">sauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;} {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">big_cons</span> {}<span class="id" title="var">indH</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">set</span> <span class="id" title="var">ax</span> := (<span class="id" title="var">a</span> <span class="id" title="var">x</span>); <span class="id" title="var">have</span> <span class="id" title="var">axx</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">(</span></a><span class="id" title="var">a</span> <span class="id" title="var">x</span><a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">)</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <span class="id" title="var">ax</span> <span class="id" title="tactic">by</span> [].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">move</span>: <span class="id" title="var">axx</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">case</span>: <span class="id" title="var">ax</span> =&gt; <span class="id" title="var">axx</span>; <span class="id" title="tactic">rewrite</span> //= <span class="id" title="var">axx</span> //= <span class="id" title="lemma">add0n</span> <span class="id" title="definition">mulrS</span> <span class="id" title="definition">addrA</span>. {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">by</span> [].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">by</span> <span class="id" title="tactic">rewrite</span> [<span class="id" title="tactic">in</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.15.1/stdlib//Coq.ssrmatching.ssrmatching.html#SsrMatchingSyntax.RHS"><span class="id" title="abbreviation">RHS</span></a>] <span class="id" title="definition">addrA</span>;  <span class="id" title="tactic">rewrite</span> [<span class="id" title="tactic">in</span> <span class="id" title="var">X</span> <span class="id" title="tactic">in</span> <a class="idref" href="Friendship.bigops.html#X:9"><span class="id" title="variable">X</span></a> <span class="id" title="notation">+</span> <span class="id" title="notation">(</span><span class="id" title="var">_</span> <span class="id" title="notation">*+</span> <span class="id" title="var">_</span><span class="id" title="notation">)</span>]<span class="id" title="definition">addrC</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">End</span> <a class="idref" href="Friendship.bigops.html#bigops"><span class="id" title="section">bigops</span></a>.<br/>
+</div>
+</div>
+<div id="footer">
+  Generated by <a href="http://coq.inria.fr">coqdoc</a> and improved with <a href="https://github.com/palmskog/coqdocjs">CoqdocJS</a> as adapted for <a href="https://github.com/coq-community">coq-community</a>
+</div>
+</div>
+</body>
+
+</html>
