@@ -3,6 +3,13 @@ From mathcomp Require Import fintype (*tuple *) finfun bigop  (*fingroup perm*).
 From mathcomp Require Import ssralg zmodp matrix mxalgebra poly (* polydiv *)
   mxpoly.
 
+(*
+Only works with pure ring expressions, and I couldn't find any in this proof.
+Maybe it would work with "generalize <expr>; field"? TODO: try that.
+From mathcomp.algebra_tactics Require Import ring .
+ *)
+
+
 From mathcomp Require Import algC.
 Require Import Lia.
 From Hammer Require Import Tactics .
@@ -45,12 +52,14 @@ Section adj2_matrix_props.
       rewrite det_scalar -[in LHS]signr_odd.
     
     have neg1M_unit m : ((-1)%:M : 'M[R]_m) \in unitmx
-        by rewrite unitmxE neg1M_det; case: (odd m); 
+        by rewrite unitmxE neg1M_det; case: (odd m);
       rewrite ?expr1 ?expr0 ?unitrN1 ?unitr1.
+
+
     
-    rewrite unitmxE  det_block // neg1M_det (pinvmxE (neg1M_unit _))
-      invmx_scalar det_mx11 invrN1  scalar_mxC
-            -mulmxA dotmul  mul_scalar_mx scalemx_const !mxE  mulN1r opprK
+    rewrite unitmxE  det_block // neg1M_det (pinvmxE (neg1M_unit _)) 
+     invmx_scalar det_mx11  invrN1  scalar_mxC
+            -mulmxA dotmul  mul_scalar_mx scalemx_const  !mxE mulN1r opprK
             -{2}(mulr1n 1) -mulrnDr.
     generalize nge1;
       case n => [_|n' _] //= ;
@@ -59,7 +68,7 @@ Section adj2_matrix_props.
     
     suff aou: (@GRing.natmul (ZmodType algC _ ) 1 (1 + n')) != 0.
     case: (odd n') => //=; rewrite ?expr1 ?expr0 ?unitrN1 ?unitr1;
-                      apply: GRing.mulf_neq0;
+                      apply: GRing.mulf_neq0; 
                       [ exact (lreg_neq0 (lregN (@lreg1 _)))
                       | exact (aou )|   |exact (aou) ].
     exact (oner_neq0 _).
@@ -109,7 +118,6 @@ Section adj2_matrix_props.
       suff -> : (1 + (k - 1))%N = k by [].
       {
         by move: kge1; case k => [|k' _] //=; ssrnat_lia.
-                                   
       }
     }
     
