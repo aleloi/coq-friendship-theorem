@@ -36,16 +36,7 @@ field `algC` with characteristic 0.
 - Related publication(s): none
 
 ## Building and installation instructions
-
-The easiest way to install the latest released version of Friendship Theorem in Coq
-is via [OPAM](https://opam.ocaml.org/doc/Install.html):
-
-```shell
-opam repo add coq-released https://coq.inria.fr/opam/released
-opam install coq-friendship-theorem
-```
-
-To instead build and install manually, do:
+To build and install do:
 
 ``` shell
 git clone https://github.com/aleloi/coq-friendship-theorem.git
@@ -53,7 +44,6 @@ cd coq-friendship-theorem
 dune build
 dune install
 ```
-
 
 ## Documentation
 
@@ -68,7 +58,7 @@ algebraically closed fields. Instead I explicitly diagonalize the
 $A^2$ matrix by constructing a basis change matrix. Then I prove
 that whenever the characteristic polynomial of $A^2$ over `algC`
 is $\prod_\mu (z-\mu)$, the characteristic polynomial of $A$ must
-be $\prod_\mu (z-\pm\sqrt{\mu})$.
+be $\prod_\mu (z+\pm\sqrt{\mu})$.
 
 The theorem formulation is currently
 ``` coq
