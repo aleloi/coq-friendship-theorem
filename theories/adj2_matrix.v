@@ -5,9 +5,6 @@ From mathcomp Require Import ssralg zmodp matrix mxalgebra poly (* polydiv *)
 
 From mathcomp.algebra_tactics Require Import ring.
 From mathcomp.zify Require Import zify. 
-(*Require Import Cdcl.NOlia.
-Require Import Cdcl.Itauto .
-*)
 
 From mathcomp Require Import algC.
 From Hammer Require Import Tactics .
@@ -28,17 +25,12 @@ From mathcomp Require Import tuple seq.
 #[local] Hint Rewrite expr1 expr0 mulN1r mulrN1 invrN1 @opprK unitfE mulr1n
   mulr0n addr0 add0r mulr1 mul1r scaleN1r addrN iter_mulr opprB expr2
   scaler0: sring.
-(*#[local] Hint Resolve unitrN1 unitr1: sunit.
-#[local] Hint Resolve mulrC mulrA mulr1n mulrnDr : sring_rw.
-#[local] Hint Resolve scalar_mxC mulmxA : smatrix_h.*)
+
 #[local] Hint Rewrite det_mx11 invmx_scalar dotmul mul_scalar_mx mul_mx_scalar
   scalemx_const mul0mx map_scalar_mx mulmx0: smatrix_r.
 
 Ltac simpl_mr := autorewrite with smatrix_r sring.
-(*Ltac r_mx := rewrite ?det_mx11 ?invmx_scalar ?dotmul.*)
 
-(*Ltac ssrnat_lia := rewrite /leq /subn /subn_rec /addn /addn_rec
-                     /muln /muln_rec; lia.*)
 Section adj2_matrix_props.
   
   
@@ -63,22 +55,6 @@ Section adj2_matrix_props.
 
     (* -I and  (1 - 1 *m -I *m 1) are invertible *) 
     rewrite unitmxE  det_block //= unitrM; apply/andP; split. {
-      predict 25.
-      (*hauto use: eq_ind, neg1M_unit, esym, unitmxE.*)
-      
-      exact (eq_ind  _ _ (neg1M_unit _ ) _ (esym (unitmxE (-1)%:M ))).
-      Check eq_ind.
-      Check (esym (unitmxE (-1)%:M )).
-      
-      rewrite -unitmxE.
-      
-      Search (?x = ?y -> ?y = ?x).
-      Show Proof.
-      Check unitmxE.
-      sauto use: unitmxE, neg1M_unit.
-      
-      sauto use: unitmxE.
-      rewrite -unitmxE.
       by rewrite -unitmxE.
     } {
       rewrite  (pinvmxE (neg1M_unit _)) det_mx11; simpl_mr;
