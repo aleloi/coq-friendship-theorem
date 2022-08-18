@@ -11,6 +11,8 @@ From mathcomp Require Import algC.
 From Hammer Require Import Tactics .
 From Hammer Require Import Hammer .
 
+From mathcomp.zify Require Import zify. 
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -167,7 +169,7 @@ Section friendship_sec.
     have /eqP := almost_regular_leq fuv.
     rewrite Fsym in fuv.
     have /eqP := almost_regular_leq fuv.
-    ssrnat_lia.
+    lia.
   Qed.
   
   Section assume_contra.
@@ -340,7 +342,7 @@ Section friendship_sec.
         by [].
       }
       move: k kge1 => [|k''] //=.
-      ssrnat_lia.
+      lia.
     Qed.
     Definition adj_cover :=[set adj' u | u in adj T_elem].
     Definition dist2 := cover adj_cover.
@@ -411,7 +413,7 @@ Section friendship_sec.
 
           move=> k_eq.
           have k1 : k = 1%N
-            by move: k  kge1 k_eq => [| k'] //=; ssrnat_lia.
+            by move: k  kge1 k_eq => [| k'] //=; lia.
           move: k_not_1; rewrite k1.
           move =>  /eqP; clear; firstorder.
         }
@@ -525,7 +527,7 @@ Section friendship_sec.
     Lemma nk: n = (k*k - k + 1)%N.
       rewrite T_size.
       move: k kge1 => [| k'] //=.
-      by ssrnat_lia.
+      by lia.
     Qed.
 
     Lemma A2_off_diag i j:  i != j -> (A*m A) i j = 1%:R.
@@ -603,8 +605,8 @@ Section friendship_sec.
         rewrite A2_diag !mxE .
         rewrite eq_refl GRing.mulr1n.
         move: k kge1 => [|k'] //= _.
-        have -> : (k'.+1-1)%N = k' by ssrnat_lia.
-        have -> : k'.+1 = (1+k')%N by ssrnat_lia.
+        have -> : (k'.+1-1)%N = k' by lia.
+        have -> : k'.+1 = (1+k')%N by lia.
         by rewrite GRing.natrD.
       } {
         move=> /eqP ij.
@@ -622,7 +624,7 @@ Section friendship_sec.
     Lemma cast_eq:  nn = (1+(n-1))%N.
     Proof.
       rewrite n_eq.
-      by move: n nge1 => [| n'] //=; ssrnat_lia.
+      by move: n nge1 => [| n'] //=; lia.
     Qed.
 
     Definition A' := (castmx (cast_eq, cast_eq) A).
@@ -668,7 +670,7 @@ Section friendship_sec.
        *)
       
       move=> k2.
-      have n3 : n=3%N by rewrite nk k2; ssrnat_lia.
+      have n3 : n=3%N by rewrite nk k2; lia.
       have adj1 u: #|adj u| = 2%N (* Every |adj u| is 2. *)
         by apply/eqP; rewrite -{}k2 -/(deg u)  (regular u).
       clear Co Col Cor CoUnique.
@@ -690,7 +692,7 @@ Section friendship_sec.
         move: full_card => /idP  /eqP /esym ->.
         by rewrite adjU adj1.
       }
-      have cta1 : cta == 1%N by apply/eqP; move: cta12; ssrnat_lia.
+      have cta1 : cta == 1%N by apply/eqP; move: cta12; lia.
 
       (* Thus |adj t ⧵ [set a]| = [set b]. *)
       move: (cards1P cta1) => [b setb].

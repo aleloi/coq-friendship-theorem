@@ -3,16 +3,15 @@ From mathcomp Require Import fintype (*tuple *) finfun bigop  (*fingroup perm*).
 From mathcomp Require Import ssralg zmodp matrix mxalgebra poly (* polydiv *)
   mxpoly.
 
-(*
-Only works with pure ring expressions, and I couldn't find any in this proof.
-Maybe it would work with "generalize <expr>; field"? TODO: try that.
-From mathcomp.algebra_tactics Require Import ring .
- *)
-
+From mathcomp.algebra_tactics Require Import ring.
+From mathcomp.zify Require Import zify. 
+(*Require Import Cdcl.NOlia.
+Require Import Cdcl.Itauto .
+*)
 
 From mathcomp Require Import algC.
-Require Import Lia.
 From Hammer Require Import Tactics .
+From Hammer Require Import Hammer .
 
 Require Import Friendship.square_char_poly.
 Require Import Friendship.matrix_lemmas.
@@ -26,9 +25,20 @@ Import GRing.Theory.
 Local Open Scope ring_scope.
 
 From mathcomp Require Import tuple seq.
+#[local] Hint Rewrite expr1 expr0 mulN1r mulrN1 invrN1 @opprK unitfE mulr1n
+  mulr0n addr0 add0r mulr1 mul1r scaleN1r addrN iter_mulr opprB expr2
+  scaler0: sring.
+(*#[local] Hint Resolve unitrN1 unitr1: sunit.
+#[local] Hint Resolve mulrC mulrA mulr1n mulrnDr : sring_rw.
+#[local] Hint Resolve scalar_mxC mulmxA : smatrix_h.*)
+#[local] Hint Rewrite det_mx11 invmx_scalar dotmul mul_scalar_mx mul_mx_scalar
+  scalemx_const mul0mx map_scalar_mx mulmx0: smatrix_r.
 
-Ltac ssrnat_lia := rewrite /leq /subn /subn_rec /addn /addn_rec
-                     /muln /muln_rec; lia.
+Ltac simpl_mr := autorewrite with smatrix_r sring.
+(*Ltac r_mx := rewrite ?det_mx11 ?invmx_scalar ?dotmul.*)
+
+(*Ltac ssrnat_lia := rewrite /leq /subn /subn_rec /addn /addn_rec
+                     /muln /muln_rec; lia.*)
 Section adj2_matrix_props.
   
   
@@ -37,160 +47,142 @@ Section adj2_matrix_props.
   
   Definition matN := 'M[R]_(1%N + (n-1)%N).
 
-  Definition P : matN := (@block_mx _ 1 (n-1)%N 1 (n-1)%N
-                            (const_mx 1)  (const_mx 1)
-                            (const_mx 1) ((-1)%:M)).
+  Definition P : matN := block_mx (const_mx 1)  (const_mx 1)
+                            (const_mx 1) ((-1)%:M).
 
-  
   (* Proof by computation; Use the block determinant formula to show
    that the determinant is ±n, and then use the field characteristic
    assumption to show that it's not zero. *)
   Lemma P_unit : P \in unitmx.
-    
-    have neg1M_det m : 
-      (\det ((-1)%:M : 'M[R]_m)) = (-1) ^+ (odd m) by
-      rewrite det_scalar -[in LHS]signr_odd.
-    
-    have neg1M_unit m : ((-1)%:M : 'M[R]_m) \in unitmx
-        by rewrite unitmxE neg1M_det; case: (odd m);
-      rewrite ?expr1 ?expr0 ?unitrN1 ?unitr1.
 
+    (* -I is invertible *)
+    have neg1M_unit m: ((-1)%:M : 'M[R]_m)  \in unitmx. {
+      suff : (-1)%:M *m (-1)%:M = (1%:M : 'M[R]_m) by apply mulmx1_unit.
+      by rewrite -scalar_mxM; apply: f_equal; ring.
+    }
 
-    
-    rewrite unitmxE  det_block // neg1M_det (pinvmxE (neg1M_unit _)) 
-     invmx_scalar det_mx11  invrN1  scalar_mxC
-            -mulmxA dotmul  mul_scalar_mx scalemx_const  !mxE mulN1r opprK
-            -{2}(mulr1n 1) -mulrnDr.
-    generalize nge1;
-      case n => [_|n' _] //= ;
-                rewrite subSS  /subn /subn_rec  PeanoNat.Nat.sub_0_r  unitfE .
-
-    
-    suff aou: (@GRing.natmul (ZmodType algC _ ) 1 (1 + n')) != 0.
-    case: (odd n') => //=; rewrite ?expr1 ?expr0 ?unitrN1 ?unitr1;
-                      apply: GRing.mulf_neq0; 
-                      [ exact (lreg_neq0 (lregN (@lreg1 _)))
-                      | exact (aou )|   |exact (aou) ].
-    exact (oner_neq0 _).
-    
-    by rewrite -[(1+n')%N]/n'.+1  (iffLR (charf0P _) Cchar _).
+    (* -I and  (1 - 1 *m -I *m 1) are invertible *) 
+    rewrite unitmxE  det_block //= unitrM; apply/andP; split. {
+      predict 25.
+      (*hauto use: eq_ind, neg1M_unit, esym, unitmxE.*)
+      
+      exact (eq_ind  _ _ (neg1M_unit _ ) _ (esym (unitmxE (-1)%:M ))).
+      Check eq_ind.
+      Check (esym (unitmxE (-1)%:M )).
+      
+      rewrite -unitmxE.
+      
+      Search (?x = ?y -> ?y = ?x).
+      Show Proof.
+      Check unitmxE.
+      sauto use: unitmxE, neg1M_unit.
+      
+      sauto use: unitmxE.
+      rewrite -unitmxE.
+      by rewrite -unitmxE.
+    } {
+      rewrite  (pinvmxE (neg1M_unit _)) det_mx11; simpl_mr;
+      rewrite scalar_mxC -mulmxA; simpl_mr; rewrite !mxE;
+        simpl_mr.
+      
+      have -> : 1 + (n - 1)%:R = ((1 + (n-1))%:R ) by
+        hauto use: mulr1n, mulrnDr.
+      rewrite unitfE  (iffLR (charf0P _) Cchar _).
+      lia.
+    }
   Qed.
 
-  Definition diag_vec : 'rV[R]_(1 + (n-1)) :=
-    (row_mx ((k+n-1)%:R%:M : 'rV_1)
-       (@const_mx R _ _ (k-1)%:R : 'rV_(n-1))).
-
-  Definition adj2_diag : matN := diag_mx diag_vec.
-
-
-  Lemma adj_diag_block_form : adj2_diag = @block_mx _ 1 (n-1)%N 1 (n-1)%N
-                                            (const_mx (k+n-1)%:R) 0
-                                            0            (k-1)%:R%:M.
-    rewrite /adj2_diag /diag_vec diag_mx_row diag_const_mx.
-
-    suff oeua: (diag_mx (@scalar_mx _ 1 (k+n-1)%N%:R)) = 
-                 (@const_mx R 1 1 (k+n-1)%N%:R)
-      by rewrite oeua.
-    
-    by rewrite (mx11_scalar (const_mx _)) (mx11_scalar (diag_mx _)) !mxE
-    //=.
-  Qed.
-
-  
-  Definition adj2 : 'M[R]_(1 + (n-1))  := (const_mx 1) +
-                                            (k-1)%:R%:M.
+  (* Sqaure of friendship graph adjacency matrix *)
+  Definition adj2 : 'M[R]_(1 + (n-1))  := (const_mx 1) + (k-1)%:R%:M.
   
   Lemma adj2_block_form :
-    adj2 = @block_mx _ 1 (n-1)%N 1 (n-1)%N
+    adj2 = block_mx 
              (const_mx k%:R)     (const_mx 1)
              (const_mx 1)        ((const_mx 1) + (k - 1)%:R%:M).
   Proof.
-    rewrite -(@submxK R 1 (n-1)%N 1 (n-1)%N adj2).
+    rewrite -(submxK adj2).
     
-    have -> : (@ulsubmx _ 1 _ 1 _ adj2) = const_mx k%:R.
+    have -> : (ulsubmx  adj2) = const_mx k%:R.
     {
       apply/matrixP=> i j; rewrite !mxE .
 
       have {i} {j} -> : lshift (n - 1) i == lshift (n - 1) j
         by rewrite !ord1; apply/eqP.
-      
-      rewrite -{1}(mulr1n 1) -mulrnDr.
-      suff -> : (1 + (k - 1))%N = k by [].
-      {
-        by move: kge1; case k => [|k' _] //=; ssrnat_lia.
-      }
+      simpl_mr.
+      have -> : 1 + (k - 1)%:R = (1 + (k-1))%:R
+        by hauto use: mulr1n, mulrnDr.
+      apply: f_equal; lia.
     }
     
-    have -> : (@ursubmx _ 1 _ 1 _ adj2) = const_mx 1. {
-      apply/matrixP=> i j; rewrite !mxE !ord1.
-      have -> : (lshift (n - 1) 0 == rshift 1 j) = false 
-        by rewrite eq_lrshift.
-      by rewrite mulr0n addr0.
-    }
+    have -> : ursubmx adj2 = const_mx 1 by
+      apply/matrixP=> i j; rewrite !mxE !ord1 eq_lrshift; simpl_mr.
+    
+    have -> : dlsubmx adj2 = const_mx 1
+      by apply/matrixP=> i j; rewrite !mxE !ord1 eq_rlshift; simpl_mr.
 
-    have -> : (@dlsubmx _ 1 _ 1 _ adj2) = const_mx 1. {
-      apply/matrixP=> i j; rewrite !mxE !ord1.
-      have -> : (rshift 1 i == lshift (n-1) 0) = false 
-        by rewrite eq_rlshift.
-      by rewrite mulr0n addr0.
-    }
-
-    suff -> : (@drsubmx _ 1 _ 1 _ adj2) = const_mx 1 + (k - 1)%:R%:M by []. {
+    by have -> : (drsubmx adj2) = const_mx 1 + (k - 1)%:R%:M
       by apply/matrixP=> i j; rewrite !mxE eq_rshift.
-    }
   Qed.
 
   
+  (* Will be the spectrum of adj2 as a vector *)
+  Definition diag_vec : 'rV[R]_(1 + (n-1)) :=
+    (row_mx (k+n-1)%:R%:M (const_mx (k-1)%:R )).
+
+  (* Will show that adj2 diagonalizes to adj2_diag *)
+  Definition adj2_diag : matN := diag_mx diag_vec.
+
+  Lemma adj_diag_block_form : adj2_diag = block_mx
+                                            (const_mx (k+n-1)%:R) 0
+                                            0            (k-1)%:R%:M.
+    rewrite /adj2_diag /diag_vec diag_mx_row diag_const_mx.
+    by have -> m : (diag_mx  m%:M) = (const_mx m : 'M[R]_1)
+      by rewrite (mx11_scalar (const_mx _)) (mx11_scalar (diag_mx _))
+           !mxE //=.
+  Qed.
+
+  (* Almost proves that adj2 diagonalizes to adj2_diag though basis
+  change matrix P. *)
   Lemma D_m_P_eq : P *m adj2 = adj2_diag *m P.
 
     rewrite /P adj2_block_form adj_diag_block_form
-      !mulmx_block !mul0mx !addr0 !add0r !mul_scalar_mx
-      (mx11_scalar (const_mx (k + n - 1)%:R)) (mx11_scalar (const_mx 1))
+      !mulmx_block (mx11_scalar (const_mx (k + n - 1)%:R))
+      (mx11_scalar (const_mx 1))
       [in RHS](mx11_scalar (const_mx 1))
-      !mxE -scalar_mxM //= !mul_scalar_mx !scalemx_const !mulr1  scale_scalar_mx.
-
-    (* Top left block : *)
-    rewrite mul1r dotmul  (mx11_scalar (const_mx k%:R))
-      (mx11_scalar (const_mx (n-1)%:R))
-      !mxE (mx11_scalar (k%:R%:M + (n - 1)%:R%:M)) mxE  !(mxE _ _ 0 0) //=
-      !mulr1n -natrD.
-    have -> : (k + (n - 1))%N = (k + n -1)%N
-      by move:  nge1 => /ltP; ssrnat_lia.
+       -scalar_mxM dotmul
+              (mx11_scalar (const_mx k%:R))
+              (mx11_scalar (const_mx (n-1)%:R)) !mxE.
     
-    (* Bot left block: *)
-    rewrite scalar_mxC mul_scalar_mx scalemx_const mulr1.
-    have ->:
-      (@const_mx R (n-1) 1 k%:R + const_mx (-1)) = const_mx (k-1)%:R .
-    apply/matrixP => i j; rewrite !mxE.
-    move: kge1; case: k => [//| k' _].
+    simpl_mr; rewrite !scale_scalar_mx !mul_mx_scalar; simpl_mr;
+    rewrite (mx11_scalar (k%:R%:M + (n - 1)%:R%:M)) !mxE //=; simpl_mr;
+      rewrite -natrD -!raddfD //=.
     
-    by rewrite /subn /subn_rec //= PeanoNat.Nat.sub_0_r  [_.+1]/((1+k')%N) -/addn
-         natrD addrC addrA (addNr 1) add0r.
-    (* bot left block done *)
-
     (* 1×1^T = ones; used in 2 places. *)
-    have -> : (@const_mx R (n-1) (n-1) 1) =
-                (const_mx 1 : 'cV__) *m (const_mx 1 : 'rV__).
-    apply/matrixP => i j; rewrite !mxE  (eq_bigr (fun=>1))  ?big_const_ord
-                            ?iter_addr ?addr0 //=.
-    by move=> i' _; rewrite !mxE mulr1.
+    have outer : (const_mx 1 : 'M[R]_(n-1)) =
+                (const_mx 1 : 'cV__) *m (const_mx 1 : 'rV__). {
+      apply/matrixP => i j; rewrite !mxE  (eq_bigr (fun=>1))  ?big_const_ord
+                              ?iter_addr; simpl_mr. { by []. }
+      by move=> i' _; rewrite !mxE; simpl_mr.
+    }
     (* end proof  of 1×1 = ones*)
-
-    (* Top right piece *)
-    rewrite mulmxDr  [in LHS]mulmxA dotmul
-      (mx11_scalar (const_mx _)) (mxE _ _ 0 0)
-      mul_scalar_mx  mul_mx_scalar !scalemx_const -!raddfD //=.
-
-    have -> : 1 + ((n - 1)%:R * 1 + (k - 1)%:R * 1) = ((k + n - 1)%:R :R).
-    rewrite !mulr1  -{1}[in 1](mulr1n 1) -!natrD.
-    suff -> : (1 + (n - 1 + (k - 1)))%N = (k + n - 1)%N by [].
-    by move: nge1 kge1 => /ltP nge1' /ltP kge1'; ssrnat_lia.
-
-    (* Top right piece done *)
-
-    (* Bot right piece *)
-    by rewrite scaleN1r [in -(_ + _)] raddfD //=  addrA addrN add0r mulrN1
-       -mulNrn -raddfN //= mulNrn.
+    
+    have block_eq:  forall A B C D A' B' C' D', A = A' -> B = B' -> C = C' -> D = D' ->
+                                                block_mx A B C D = block_mx A' B' C' D'
+        by sauto. 
+    apply: block_eq. { (* Top left block 1×1*)
+      apply: f_equal;  apply: f_equal; lia.
+    } { (* top right block: 1×(n-1) *)
+      rewrite mulmxDr outer mulmxA dotmul  (mx11_scalar (const_mx _)) !mxE;
+      simpl_mr; rewrite mul_mx_scalar; simpl_mr; rewrite -!raddfD //=.
+      apply: f_equal.
+      rewrite -{1}[in 1](mulr1n 1)  -!natrD; apply: f_equal; lia.
+    } { (* bot left block (n-1)×1 *)
+      apply: f_equal.
+      rewrite natrB; last first. { by []. } 
+      by [].
+    } { (* bot left block (n-1 × n-1) *)
+      by rewrite -outer raddfN raddfD //= addrA; simpl_mr.
+    }
   Qed.
 
   Lemma diagonalizable_m : adj2 ~_P adj2_diag.
@@ -198,209 +190,184 @@ Section adj2_matrix_props.
                      |  exact D_m_P_eq].
   Qed.
 
-
+  (* Characteristic polynomial of adj2 as a factored polynomial *)
   Lemma char_poly_adj2: char_poly adj2 =
                           ('X - ((k + n - 1)%:R)%:P) * ('X - ((k - 1)%:R)%:P) ^+ (n - 1).
   Proof.
-    rewrite (simmx_charpoly P_unit diagonalizable_m).
-    have adj2_trig : is_trig_mx adj2_diag
-      by apply: (is_diag_mx_is_trig (diag_mx_is_diag _)).
-    rewrite (char_poly_trig adj2_trig).
+    (* Write as product; split in 1 + (n-1) terms. *)
+    rewrite (simmx_charpoly P_unit diagonalizable_m)
+      (char_poly_trig (is_diag_mx_is_trig (diag_mx_is_diag _)))
+      [(n-1).+1]/((1 + (n-1))%N) -/addn  big_split_ord //=
+      -/adj2_diag adj_diag_block_form
+      [in X in X*_](eq_bigr (fun=> ('X-((k + n - 1)%:R) %:P))); last first.
+    by move=>i _; rewrite block_mxEul mxE.
 
-    rewrite (@big_split_ord _ _ _ 1%N (n-1) _ _) //= adj_diag_block_form
-      (eq_bigr (fun=> ('X-((k + n - 1)%:R :R) %:P))); last first.
-    {
-      move=>i _; rewrite block_mxEul.
-      suff -> : (@const_mx R 1 1 (k + n - 1)%:R i i) = (k + n - 1)%:R by [].
-      by rewrite mxE.
-    }
-
+    (* rewrite product with (n-1) terms as ∏ X-(k-1) *)
     rewrite [in X in _*X](eq_bigr (fun=> ('X-((k - 1)%:R) %:P))); last first.
-    {
-      move=>i _; rewrite block_mxEdr.
-      suff -> : ((k - 1)%:R%:M i i) = ((k - 1)%:R :R) by [].
-      rewrite mxE //=.
-      have -> : (i==i) by apply/eqP .
-      by rewrite mulr1n.
-    }
+    by move=>i _; rewrite block_mxEdr mxE eq_refl.
 
-    by rewrite !big_const_ord !iter_mulr !mulr1 expr1.
-    
+    by rewrite !big_const_ord !iter_mulr;  simpl_mr.  
   Qed.
 
-  Definition lams : (1+(n-1)).-tuple algC := cons_tuple (k + n - 1)%:R
-                                               (nseq_tuple (n-1) (k - 1)%:R). 
+  (* Spectrum of adj2 *)
+  Definition lams : seq algC := cons (k + n - 1)%:R
+                                  (nseq (n-1) (k - 1)%:R). 
+
+  (* Char poly of adj2 as a product over it's spectrum *)
   Lemma lams_prod: char_poly adj2 = \prod_(l <- lams) ('X - l%:P).
-    rewrite char_poly_adj2  /lams big_cons.
-    apply: f_equal.
-    rewrite big_tnth.
-    rewrite (eq_bigr (fun => ('X-((k - 1)%:R) %:P))); last first. {
-      move=> i _.
-      by rewrite tvalK  tcastE tnth_nseq.
-    }
-    by rewrite big_const_ord iter_mulr mulr1  size_tuple.
+    by rewrite char_poly_adj2  /lams big_cons big_nseq iter_mulr; simpl_mr.
   Qed.
 
   Definition is_square_root A := A *m A = adj2.
-  (*From mathcomp Require Import seq.*)
-
   
-
+  (* Spectrum of √adj2: shows that it can be linearly factored into
+  X-square roots of the spectrum of adj2. *)
   Lemma adj_mtx_char_poly adj :
     is_square_root adj ->
-    (*char_poly mtx = \prod_(μ <- μs) ('X - μ %:P) ->*)
-    { μs' : (1+(n-1)).-tuple R |
-      char_poly adj = \prod_(μ <- μs') ('X - μ %:P) &
-        all2 (fun μ λ => μ^2 == λ) μs' (cons_tuple (k + n - 1)%:R
-                                         (nseq_tuple (n-1) (k - 1)%:R))
+    { μs : seq R |
+      char_poly adj = \prod_(μ <- μs) ('X - μ %:P) &
+        all2 (fun μ λ => μ^2 == λ) μs (cons (k + n - 1)%:R
+                                         (nseq (n-1) (k - 1)%:R))
     }.
   Proof.
+    (* Proof strategy:
+       - Let p = char poly of adj (not adj2!)
+       - by algebraic closedness, p = C× ∏_{μ ∈ μs} (X - μ)
+       - by char_poly_monic, C=1
+       - by size_char_poly, the 'deg p = n'
+       - p(X^2) = ∏_{μ ∈ μs} X^2 - μ by substitution
+       - Let q' = ∏_{μ ∈ μs} X^2 - μ^2 (this will be the char poly of 
+                                           adj2 evaluated at X^2)
+       - q' factors as q'= (∏_{μ ∈ μs} X - μ)⋅(∏_{μ ∈ μs} X + μ)
+       - the second part of q' is (∏_{μ ∈ μs} X^2 + μ) = (-1)^n⋅p(-X)
+
+       - p(-X) = \det ( -X⋅I- adj) by substitution
+       - q'(X) = \det (X^2⋅I - adj2).
+       - q'(X) = q(X^2) 
+
+       The remainder of the proof is exactly 'polys_and_squares_technical_lemma'.
+       (boring induction)
+    *)
     move=> adj2_eq.
+    set n' := (1 + (n-1))%N.
+
+    (* - Let p = char poly of adj (not adj2!) *)
     set p := char_poly adj.
-    have [μs' prop] := closed_field_poly_normal p.
-    rewrite (monicP (char_poly_monic adj)) scale1r in prop.
+
+    (* - by algebraic closedness, p = C× ∏_{μ ∈ μs} (X - μ) *)
+    have [μs p_prod] := closed_field_poly_normal p.
+
+    (* - by size_char_poly, the 'deg p = n' *)
+    rewrite (monicP (char_poly_monic adj)) scale1r in p_prod.
     have deg_p := size_char_poly adj.
-    have size_μs' : (seq.size μs') == (1 + (n-1))%N by
-      subst p; rewrite prop size_prod_XsubC  in deg_p; apply /eqP; congruence.
+    have size_μs : (seq.size μs) = n'.
+      subst p; rewrite p_prod size_prod_XsubC -/n' in deg_p; congruence.
     clear deg_p.
     simpl in *.
-    set tμs' := (@Tuple _ _ μs' size_μs').
-    have tp : p = \prod_(z <- tμs') ('X - z%:P)
-      by rewrite prop; apply: eq_bigr.
 
-    have p_X2 : p \Po 'X^2 = \prod_(μ <- tμs') ('X^2 - μ%:P)
-      by rewrite tp (big_endo (fun q=> q\Po 'X^2)
+    
+    (*set tμs := (@Tuple _ _ μs size_μs).*)
+    (*have tp : p = \prod_(z <- tμs) ('X - z%:P)
+      by rewrite prop; apply: eq_bigr.*) 
+    have p_X2 : p \Po 'X^2 = \prod_(μ <- μs) ('X^2 - μ%:P)
+      by rewrite p_prod (big_endo (fun q=> q\Po 'X^2)
                        (fst (comp_poly_multiplicative 'X^2) )
                        (snd (comp_poly_multiplicative 'X^2) )
            );
       apply/eq_bigr => μ _;
                        rewrite comp_polyD comp_polyX -polyCN comp_polyC.
 
-    set p_μ2 := (\prod_(μ <- tμs') ('X^2 - (μ%:P)^2) : {poly algC}).
-    have p_μ2_eq : p_μ2 = (\prod_(μ <- tμs') ('X - (μ%:P))) *
-                            (\prod_(μ <- tμs') ('X + (μ%:P))) . {
-      subst p_μ2;
+    (* - Let q' = ∏_{μ ∈ μs} X^2 - μ^2 (this will be the char poly of 
+                                           adj2 evaluated at X^2) *)
+    set q' := (\prod_(μ <- μs) ('X^2 - (μ%:P)^2) : {poly algC}).
+
+    (* - q' factors as q'= (∏_{μ ∈ μs} X - μ)⋅(∏_{μ ∈ μs} X + μ) *)
+    have q'_eq : q' = (\prod_(μ <- μs) ('X - (μ%:P))) *
+                            (\prod_(μ <- μs) ('X + (μ%:P))) . {
+      subst q';
         rewrite (eq_bigr (fun μ => ('X - μ%:P) * ('X + μ%:P))) //=. {
         by rewrite big_split //=.
       }
       by move=> μ _; rewrite subr_sqr.
     }
 
-    rewrite -tp in p_μ2_eq.
-    have μs_subst :
-      \prod_(μ <- tμs') ('X + μ%:P) = ((-1)^+(1+(n-1)))%:P * (p \Po (-'X)). {
-      clear  p_X2 p_μ2 p_μ2_eq adj2_eq  k kge1.
+    (*- the second part of q' is (∏_{μ ∈ μs} X^2 + μ) = (-1)^n⋅p(-X) *)
+    have μs_subst : \prod_(μ <- μs) ('X + μ%:P) =
+                       ((-1)^+n')%:P * (p \Po (-'X)). {
+      clear  p_X2 q' q'_eq adj2_eq  k kge1.
       rewrite (eq_bigr (fun μ => (-1)*(-'X - μ%:P))); last first.
       by move=>  μ _; rewrite mulrDr !mulN1r !opprK.
       rewrite big_split //=.
-      
-      have  -> : (\prod_(i <- μs') -1) =
-                   ((-1)^+(1+(n-1))). {
-        move=> RR.
-        clear prop tμs' tp p  adj .
-        have <- : seq.size μs' = (1 + (n - 1))%N by apply: eqP; exact size_μs'.
-        clear size_μs'.
-        elim: μs' => [|μs''].
-        by rewrite -signr_odd  expr0 big_nil.
-        move=> l indL.
-        rewrite big_cons indL.
-        rewrite -exprS.
-        suff -> : (seq.size l).+1 = seq.size (μs'' :: l) by [].
-        sauto.
-      }
-      have -> : (-1) ^+ (1 + (n - 1)) = ((-1) ^+ (1 + (n - 1)))%:P. {
-        clear prop tμs' tp  p adj .
-        move=> RR.
-        generalize ((1 + (n - 1)%N)%N) => nn.
-        rewrite -signr_odd -[in RHS]signr_odd.
-        case: (odd nn) => //=; rewrite ?expr0 ?expr1.
-        by rewrite rmorphN1.
-      }
-      
-      rewrite prop.
-      rewrite (big_endo (fun q=> q \Po (-'X))
+      have -> : (\prod_(i <- μs) -1) = ((-1)^+n')
+        by move=> RR; rewrite big_tnth big_const_ord size_μs;  simpl_mr.
+      have -> nn : (-1) ^+ nn = ((-1) ^+ nn)%:P by rewrite rmorphX rmorphN1.
+      apply: f_equal.
+      rewrite p_prod (big_endo (fun q=> q \Po (-'X))
                  (fst (comp_poly_multiplicative (-'X) ))
                  (snd (comp_poly_multiplicative (-'X) ))
-              ).
-      rewrite [in RHS](eq_bigr (fun μ => -'X - μ%:P)) //=; last first. {
-        move => μ _.
-        by rewrite comp_polyB comp_polyX comp_polyC.
-      } 
+              ) [in RHS](eq_bigr (fun μ => -'X - μ%:P)) //=.
+      by move => μ _; rewrite comp_polyB comp_polyX comp_polyC.
     }
-    
-    rewrite {}μs_subst in p_μ2_eq.
+    rewrite {}μs_subst in q'_eq.
+
+    (* p(-X) = \det ( -X⋅I- adj) by substitution *)
     have pNx_det : p \Po - 'X = \det ( -('X%:M) - map_mx polyC adj ). {
-      clear k kge1 nge1 adj2_eq μs' prop size_μs' tμs' tp p_X2 p_μ2 p_μ2_eq.
+      clear -p.
       rewrite /p /char_poly /char_poly_mx -det_map_mx //=.
       suff -> : map_mx (comp_poly (- 'X)) ('X%:M - map_mx polyC adj) =
                   - 'X%:M - map_mx polyC adj by []. {
         rewrite map_mxD //= map_scalar_mx  //= comp_polyX rmorphN //=.
-        suff -> : map_mx (comp_poly (- 'X)) (- map_mx polyC adj) = - map_mx polyC adj
-          by []. {
-          rewrite rmorphN //=  -map_mx_comp //=.
-          suff -> : map_mx (comp_poly (- 'X) \o polyC) adj = map_mx polyC adj by []. {
-            suff : comp_poly (- 'X) \o polyC =1 polyC 
-              by move=> comp_comp;
-                        apply/matrixP => i j;
-                                         rewrite !mxE (comp_comp _).
-            by move=> R {p adj } c //=;
-                        rewrite comp_polyC.
-          }
-        }
+        apply f_equal. 
+        rewrite rmorphN //=  -map_mx_comp //=.
+        
+        suff : comp_poly (- 'X) \o polyC =1 (polyC : R -> _)
+          by move=> comp_comp; apply/matrixP => i j;
+                                                rewrite !mxE (comp_comp _).
+        by move=>  c //= ; rewrite comp_polyC.
       }
     }
-    rewrite {}pNx_det in p_μ2_eq.
-    have p_μ2_det : p_μ2 = \det (('X^2)%:M  - map_mx polyC adj2). {
-      subst p; rewrite {}p_μ2_eq.
-      clear  μs' prop size_μs' tμs' tp p_X2 p_μ2.
-      have -> : ((-1) ^+ (1 + (n - 1)))%:P = ((-1) ^+ (1 + (n - 1))). {
-        generalize ((1 + (n - 1))%N).
-        move=> nn R. 
-        rewrite -signr_odd -[in RHS]signr_odd.
-        case: (odd nn) => //=; rewrite ?expr0 ?expr1.
-        by rewrite rmorphN1.
-      }
-      by rewrite -detZ scaleN1r opprB opprK  /char_poly /char_poly_mx
-         -det_mulmx  mulmxDl !mulmxDr  -rmorphN //= -scalar_mxM;
-         apply: f_equal;
-         rewrite [in X in X + _]addrC  expr2
-           [in X in _ + _ + X]addrC addrA  map_mxN //=  comm_mx_scalar
-         -[in X in X + (- _ *m _)]addrA -mulmxDr addrN mulmx0 addr0;
-         apply: f_equal;
-         rewrite -adj2_eq  map_mx_is_multiplicative //=  mulNmx.
-    }
-    clear p_μ2_eq p_X2.
-    set q := char_poly adj2.
-    have p_μ2_q : p_μ2 = q \Po 'X^2. {
-      rewrite p_μ2_det /q /char_poly /char_poly_mx  -det_map_mx //=.
-      apply: f_equal.
+    rewrite {}pNx_det in q'_eq.
 
+    (* - q'(X) = \det (X^2⋅I - adj2). *)
+    have q'_det : q' = \det (('X^2)%:M  - map_mx polyC adj2). {
+      subst p; rewrite {}q'_eq -p_prod /char_poly.
+      clear -adj2_eq.
+      have <- nn : (-1) ^+ nn = ((-1) ^+ nn)%:P by rewrite rmorphX rmorphN1.
+      by rewrite -detZ /char_poly /char_poly_mx -det_mulmx;
+      simpl_mr;
+      rewrite  mulmxDl !mulmxDr -rmorphN //= -scalar_mxM;
+      apply: f_equal;
+      rewrite [in X in X + _]addrC 
+        [in X in _ + _ + X]addrC addrA  map_mxN //=  comm_mx_scalar
+      -[in X in X + (- _ *m _)]addrA -mulmxDr; simpl_mr;
+      apply: f_equal;
+      rewrite -adj2_eq  map_mx_is_multiplicative //=  mulNmx.
+    }
+    
+    (* - q'(X) = q(X^2), with q(X) = char poly of adj^2 *)
+    clear q'_eq p_X2.
+    set q := char_poly adj2.
+    have q'_q : q' = q \Po 'X^2. {
+      clear -q'_det.
+      rewrite q'_det /q /char_poly /char_poly_mx  -det_map_mx //=.
+      apply: f_equal.
       rewrite [in RHS]map_mxD //= [in RHS]map_scalar_mx  //= comp_polyX.
       rewrite rmorphN //=.
       repeat apply: f_equal.
-
-      suff -> : map_mx (comp_poly ('X^2)) ( map_mx polyC adj2) = map_mx polyC adj2
-        by []. {
-        rewrite  -map_mx_comp //=.
-        by apply/matrixP => i j; rewrite !mxE //= comp_polyC.
-      }
+      by apply/matrixP => i j; rewrite -map_mx_comp !mxE //= comp_polyC.
     }
 
-    have aoeu : q \Po 'X^2 = \prod_(μ <- tμs') ('X^2 - (μ ^ 2)%:P). {
-      rewrite -p_μ2_q /p_μ2.
-      suff : forall μ, (μ ^ 2)%:P = (μ%:P ^ 2 : {poly algC}). {
-        move=> hyp.
-        apply eq_bigr => μ _.
-        by rewrite (hyp μ).
-      } {
-        move=> μ.
-        by rewrite !exprSzr !expr0z !mul1r  polyC_multiplicative.
-      }
+    have q_μs : q \Po 'X^2 = \prod_(μ <- μs) ('X^2 - (μ ^ 2)%:P). {
+      rewrite -q'_q /q'.
+      apply eq_bigr => μ _.
+      repeat apply: f_equal.
+      by rewrite !exprSzr; simpl_mr; rewrite polyC_multiplicative.  
     }
 
-    have [μs prop2 prop3] := (polys_and_squares_technical_lemma lams_prod aoeu). 
-    exists μs. {
-      by rewrite tp prop2.
+    clear -q_μs kge1 nge1 p_prod.
+    have [μs' prop2 prop3] := (polys_and_squares_technical_lemma lams_prod q_μs). 
+    exists μs'. {
+      by rewrite p_prod prop2.
     } {
       exact prop3.
     }

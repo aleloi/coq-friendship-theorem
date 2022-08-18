@@ -5,7 +5,8 @@ From mathcomp Require Import ssralg zmodp matrix mxalgebra poly polydiv
 
 From mathcomp Require Import algC.
 From Hammer Require Import Tactics .
-Require Import Lia.
+From mathcomp.zify Require Import zify. 
+(*Require Import Lia.*)
 (*Load matrix_lemmas.*)
 (*Load adj2_matrix.*)
 
@@ -64,44 +65,104 @@ Qed.
 
 Section square_polys.
   Definition RR:= algC.
-  Lemma polys_and_squares_technical_lemma
-    d (λs μs: d.-tuple RR) (p : poly_ringType algCring):
+
+  Lemma deg2 (μ: algC): size ('X^2 - μ%:P) = 3%N.
+  Proof.
+    rewrite  -(size_polyXn algCuring 2) size_addl //=.
+    rewrite size_opp size_polyC size_polyXn.
+    case : (μ != 0) => [|] //=.
+  Qed.
+
+  Lemma degs_equal (λs μs: seq RR) (p : poly_ringType algCring):
     p = \prod_(λ <- λs) ('X - λ%:P) ->
     (p \Po ( 'X^2 )) = \prod_(μ <- μs) ('X^2 - (μ^2) %:P) ->
-    { μs' : d.-tuple RR |
+    size λs = size μs.
+  Proof.
+    set d := size λs.
+    move=> p_eq .
+    have p_deg : size p = d.+1. {
+      move: p_eq.
+      subst d.
+      generalize p; clear p.
+      elim: λs => [p |λ λs indH p] . {
+        rewrite big_nil => ->.
+        by rewrite size_poly1.
+      } {
+        simpl in *.
+        rewrite big_cons.
+        set p' := \prod_(λ0 <- λs) ('X - λ0%:P).
+        have p'_size := (indH p' (Logic.eq_refl _)).
+        move=> pp'.
+        have <- : size (('X - λ%:P) * p') = (size λs).+2. {
+          rewrite size_proper_mul. 
+          by rewrite p'_size size_XsubC; lia.
+          apply mulf_neq0. 
+          by rewrite lead_coefXsubC oner_neq0.
+          by rewrite lead_coef_eq0 -size_poly_gt0 p'_size.
+        }
+        by rewrite pp'.
+      }
+    }
+
+    move=> p_subst_eq.
+    
+    have p_subst_deg : size (p \Po 'X^2) = (2*(size μs)).+1. {
+      clear -p_subst_eq.
+      move: p_subst_eq.
+      generalize (p \Po 'X^2); clear p.
+      elim: μs  => [p |μ μs indH p] . {
+        rewrite big_nil => ->.
+        by rewrite size_poly1.
+      } {
+        simpl in *.
+        rewrite big_cons.
+        set p' := \prod_(μ0 <- μs) ('X^2 - (μ0^2)%:P).
+        have p'_size := (indH p' (Logic.eq_refl _)).
+        move=> ->.
+        rewrite size_proper_mul. 
+        by rewrite deg2 p'_size; lia.
+        apply mulf_neq0.
+        by rewrite lead_coef_eq0 -size_poly_gt0 deg2.
+        by rewrite lead_coef_eq0 -size_poly_gt0 p'_size.
+      }
+    }
+    have sz_p_subst2 : (size (p \Po 'X^2)).-1 = (2 * d)%N by
+      rewrite size_comp_poly p_deg size_polyXn; lia.
+    rewrite p_subst_deg in sz_p_subst2.
+    lia.
+  Qed.
+    
+  Lemma polys_and_squares_technical_lemma
+    (λs μs: seq RR) (p : poly_ringType algCring):
+    p = \prod_(λ <- λs) ('X - λ%:P) ->
+    (p \Po ( 'X^2 )) = \prod_(μ <- μs) ('X^2 - (μ^2) %:P) ->
+    { μs' : seq RR |
       ((\prod_(μ <- μs ) ('X - μ%:P)) = (\prod_(μ' <- μs' ) ('X - μ'%:P))) &
         all2 (fun μ λ => μ^2 == λ) μs' λs 
     }.
   Proof.
-    destruct μs as [μs μs_len].
-    destruct λs as [λs λs_len].
     simpl.
-    move:d λs λs_len μs_len p.
-    elim: μs => [d λs λs_eq μs_sz p p_eq p_subst_eq |
-                  μ μs  indH d λs λs_eq μs_eq p p_eq p_subst_eq ]. {
-      have d0 : d = 0%N. {
-        transitivity (@seq.size algC nil).
-        symmetry.
-        by apply /eqP.
-        by [].
-      }
-      clear μs_sz.
-      move: λs_eq.
-      rewrite d0.
-      move=> λs_eq.
-      exists (nil_tuple _). {
-        by rewrite !big_nil.
-      } {
-        sauto.
-      }
+    move=> p_eq p_x2.
+    
+    have: size λs = size μs by apply (degs_equal p_eq p_x2).
+    move: λs p p_eq p_x2.
+
+    elim: μs => [ λs p  λs_eq p_eq p_subst_eq |
+                  μ μs  indH λs   p  λs_eq p_eq p_subst_eq ] . {
+      exists nil.
+      by rewrite !big_nil.
+      by sauto.
     }
-    move: μ μs  indH λs λs_eq μs_eq p p_eq p_subst_eq.
+
+    set d := size λs.
+    have d_eq : d = size λs by [].
+    move: d_eq μ p p_eq p_subst_eq λs_eq indH.
     case: d => [|d']. {
-      move=> μ μs _   λs λs_eq μs_eq.
+      move=> d_eq μ p  p' szs.
       exfalso.
       sauto.
     }
-    move=> μ μs  indH λs λs_eq μs_eq p p_eq p_subst_eq.
+    move=> d_eq μ p p_subst_eq sz_eq p_eq indH.
     rewrite big_cons in p_subst_eq.
 
     have p_subst_λs : p \Po 'X^2 = \prod_(λ <- λs) ('X^2 - λ%:P). {
@@ -176,17 +237,17 @@ Section square_polys.
     set λs_p := (seq.cat (cons λ (seq.take i_μ λs)) (seq.drop i_μ.+1 λs)).
     rewrite seq.cat_cons in λs_p.
     have λs_perm : seq.perm_eq λs λs_p. {
-            
+      
       rewrite /λs_p -seq.cat_cons.
       rewrite -[in X in (seq.perm_eq X _)] (seq.cat_take_drop i_μ.+1 λs).
       rewrite seq.perm_cat2r.
 
-    have -> : (seq.take i_μ.+1 λs) =
-                seq.rcons (seq.take i_μ λs) (seq.nth 0  λs i_μ). {
-      apply: seq.take_nth.
-      by rewrite /i_μ  -seq.has_find.
-    }
-    by rewrite seq.perm_rcons.
+      have -> : (seq.take i_μ.+1 λs) =
+                  seq.rcons (seq.take i_μ λs) (seq.nth 0  λs i_μ). {
+        apply: seq.take_nth.
+        by rewrite /i_μ  -seq.has_find.
+      }
+      by rewrite seq.perm_rcons.
     }
     rewrite (perm_big _ λs_perm) big_cons //= in p_subst_λs.
     rewrite μ_lamda in p_subst_eq.
@@ -210,16 +271,16 @@ Section square_polys.
       apply (mulfI x2_ne0).
       by rewrite -p_subst_λs  p_subst_eq.
     }
-    have μs_size_λs : seq.size μs == seq.size λs'. {
-      apply /eqP.
+    have μs_size_λs :  seq.size λs' = seq.size μs. {
+      (*apply /eqP.*)
       suff : (seq.size (μ :: μs)) = (seq.size λs').+1 by sauto.
-      move: μs_eq.
-      move=>  /eqP ->.
+      rewrite -sz_eq -d_eq.
+      apply /eqP.
+
       suff -> : d'.+1 = seq.size λs_p by
         rewrite /λs_p //=.
       rewrite -(seq.perm_size  λs_perm).
-      symmetry.
-      by apply /eqP.
+      by [].
     }
     
 
@@ -240,11 +301,9 @@ Section square_polys.
       
       by rewrite -/λs_p -(perm_big _ λs_perm) //=  -p_eq.
     }
-      
     
-    elim: (indH _ λs' (eq_refl _) μs_size_λs _ (Logic.eq_refl p')
-             p'_eq
-          ) => [μs'' p_prod roots_spec ].
+    elim: (indH λs' p' (Logic.eq_refl _) p'_eq μs_size_λs)
+        => [μs'' p_prod roots_spec ].
 
     (* λs' = seq.cat (seq.take i_μ λs) (seq.drop i_μ.+1 λs)
        μs'' matchar med λs'.
